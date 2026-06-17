@@ -39,14 +39,14 @@ const userSchema=new Schema({
     vaultKeyMeta: {
         version: {
             type: Number,
-            default: 1,
+            default: 2,
         },
         mode: {
             type: String,
-            default: "local-dev-dek",
+            default: "uninitialized",
         },
         encryptedDEK: {
-            type: String,
+            type: Object,
             default: null,
         },
         salt: {

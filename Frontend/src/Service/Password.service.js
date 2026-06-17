@@ -5,7 +5,7 @@ import {
     importDEKFromJwk,
 } from "./VaultCrypto.service.js";
 
-const backendURL = import.meta.env.VITE_BACKEND_URL;
+const backendURL = import.meta.env?.VITE_BACKEND_URL;
 
 export const getAllPasswords_Service = async () => {
     try {
@@ -21,7 +21,7 @@ export const getAllPasswords_Service = async () => {
       if (response.status === 200)return data.data;
       else return [];
     } 
-    catch (error) 
+    catch
     {
       toast.error('Failed to Load Passwords');
       return [];
@@ -30,6 +30,7 @@ export const getAllPasswords_Service = async () => {
 
 export const addPassword_Service = async ({username,websiteName,websiteURL,email,password}, vaultKeyJwk) => {
     try {
+        if (!vaultKeyJwk) throw new Error("Vault is locked");
         const token = localStorage.getItem('accessToken');
         const dek = await importDEKFromJwk(vaultKeyJwk);
         const encryptedPayload = await encryptVaultPayload({ username, email, password }, dek);
@@ -59,15 +60,16 @@ export const addPassword_Service = async ({username,websiteName,websiteURL,email
             toast.error(data?.message || "Adding Password failed")
             return false;
         }
-    } catch (error) {
-        toast.error('Server Error');
-        console.error(error);
+    } catch (_error) {
+        toast.error(_error.message || 'Server Error');
+        console.error(_error);
         return false;
 }
 };
 
 export const get_A_Password_Service = async (id, vaultKeyJwk) => {
     try {
+        if (!vaultKeyJwk) throw new Error("Vault is locked");
         const token = localStorage.getItem('accessToken');
         const dek = await importDEKFromJwk(vaultKeyJwk);
         const response = await fetch(`${backendURL}/password/getpassword/${id}`, {
@@ -95,14 +97,16 @@ export const get_A_Password_Service = async (id, vaultKeyJwk) => {
             email: decrypted.email,
             password: decrypted.password,
         };
-    } catch (error) {
-        toast.error('Server Error');
+    } catch (_error) {
+        toast.error(_error.message || 'Server Error');
         return false;
     }
 };
 
 export const updatePassword_Service = async (userData, vaultKeyJwk) => {
     try {
+  
+        if (!vaultKeyJwk) throw new Error("Vault is locked");
   
         const token = localStorage.getItem('accessToken');
         const {password,username,websiteName,websiteURL,email,id}=userData;
@@ -141,9 +145,9 @@ export const updatePassword_Service = async (userData, vaultKeyJwk) => {
             toast.error(data?.message || "Updating Password failed")
             return false;
         }
-    } catch (error) {
-        toast.error('Server Error');
-        console.error("Request failed:", error);
+    } catch (_error) {
+        toast.error(_error.message || 'Server Error');
+        console.error("Request failed:", _error);
         return false;
 }
 };
@@ -167,7 +171,7 @@ export const delete_A_Password_Service = async (id) => {
 
         toast.error(data?.message || "Error deleting password");
         return null;
-    } catch (error) {
+    } catch {
         toast.error("Server Error");
         return null;
     }

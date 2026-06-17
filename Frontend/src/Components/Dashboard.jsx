@@ -4,11 +4,14 @@ import { useNavigate, NavLink } from "react-router-dom";
 import { FaShieldAlt } from "react-icons/fa";
 import { FiMenu } from "react-icons/fi"; 
 import { RiCloseFill } from "react-icons/ri"; 
+import { useDispatch } from "react-redux";
+import { clearVaultState } from "../Features/todoslice.js";
 
 function Dashboard() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false); 
     const navigate = useNavigate();
+    const dispatch = useDispatch();
 
     useEffect(() => {
       const verifyLoginStatus = async () => {
@@ -30,6 +33,7 @@ function Dashboard() {
     const handleLogout = async () => {
         setIsLoggedIn(false);
         await logoutUser();
+        dispatch(clearVaultState());
         navigate("/");
     };
 
