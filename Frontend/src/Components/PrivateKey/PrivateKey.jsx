@@ -11,6 +11,7 @@ import Footer from "../Footer.jsx";
 import {
   fetchVaultMetaService,
   setupVaultService,
+  rotateVaultKeysService,
   unlockVaultWithRecoveryService,
   unlockVaultService,
 } from "../../Service/VaultBootstrap.service.js";
@@ -21,6 +22,7 @@ const PrivateKey = () => {
   const pendingRecoveryStorageKey = "keymate_pending_recovery_key";
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const vaultKeyJwk = useSelector((state) => state.vaultKeyJwk);
   const vaultMode = useSelector((state) => state.vaultMode);
   const vaultMeta = useSelector((state) => state.vaultMeta);
   const vaultMetaLoaded = useSelector((state) => state.vaultMetaLoaded);
@@ -32,6 +34,9 @@ const PrivateKey = () => {
   const [unlockMethod, setUnlockMethod] = useState("master");
   const [recoveryKeyReveal, setRecoveryKeyReveal] = useState("");
   const [showRecoveryReveal, setShowRecoveryReveal] = useState(false);
+  const [rotateMasterPassword, setRotateMasterPassword] = useState("");
+  const [rotateConfirmPassword, setRotateConfirmPassword] = useState("");
+  const [showRotateForm, setShowRotateForm] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
@@ -107,6 +112,37 @@ const PrivateKey = () => {
     setUnlockPassword("");
     setRecoveryKeyInput("");
     toast.success("Vault locked");
+  };
+
+  const handleRotateVault = async (e) => {
+    e.preventDefault();
+
+    if (!rotateMasterPassword || rotateMasterPassword !== rotateConfirmPassword) {
+      toast.error("New master passwords do not match");
+      return;
+    }
+
+    if (!vaultKeyJwk) {
+      toast.error("Unlock the vault before rotating keys");
+      return;
+    }
+
+    try {
+      setIsBusy(true);
+      const result = await rotateVaultKeysService(rotateMasterPassword, vaultKeyJwk);
+      dispatch(setVaultMeta(result.vaultMeta));
+      setRecoveryKeyReveal(result.recoveryKey);
+      setShowRecoveryReveal(true);
+      sessionStorage.setItem(pendingRecoveryStorageKey, result.recoveryKey);
+      setRotateMasterPassword("");
+      setRotateConfirmPassword("");
+      setShowRotateForm(false);
+      toast.success("Vault keys rotated");
+    } catch (error) {
+      toast.error(error.message || "Failed to rotate vault keys");
+    } finally {
+      setIsBusy(false);
+    }
   };
 
   if (!vaultMetaLoaded) {
@@ -259,12 +295,49 @@ const PrivateKey = () => {
             <div className="mt-6 flex flex-wrap gap-4">
               <button
                 type="button"
+                onClick={() => setShowRotateForm((prev) => !prev)}
+                className="rounded-lg bg-[#3A7CA5] px-6 py-3 font-semibold text-white shadow-lg shadow-[#3A7CA5]/40 transition-all hover:bg-[#81c3d7]"
+              >
+                Rotate Vault Keys
+              </button>
+              <button
+                type="button"
                 onClick={handleLockVault}
                 className="rounded-lg bg-[#082d3c] px-6 py-3 font-semibold text-white shadow-lg shadow-[#082d3c]/40 transition-all hover:bg-[#3B6F87]"
               >
                 Lock Vault
               </button>
             </div>
+            {showRotateForm && (
+              <form onSubmit={handleRotateVault} className="mt-6 space-y-4 rounded-xl border border-gray-600 p-4">
+                <p className="text-sm text-gray-300">
+                  Create a new master password and a new recovery key for the same DEK.
+                </p>
+                <input
+                  type="password"
+                  placeholder="New master password"
+                  value={rotateMasterPassword}
+                  onChange={(e) => setRotateMasterPassword(e.target.value)}
+                  className="w-full rounded-lg bg-gray-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#81c3d7]"
+                  required
+                />
+                <input
+                  type="password"
+                  placeholder="Confirm new master password"
+                  value={rotateConfirmPassword}
+                  onChange={(e) => setRotateConfirmPassword(e.target.value)}
+                  className="w-full rounded-lg bg-gray-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#81c3d7]"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={isBusy}
+                  className="w-full rounded-lg bg-[#3A7CA5] px-6 py-3 font-semibold text-white shadow-lg shadow-[#3A7CA5]/40 transition-all hover:bg-[#81c3d7] disabled:opacity-60"
+                >
+                  {isBusy ? "Rotating..." : "Rotate Keys"}
+                </button>
+              </form>
+            )}
           </div>
         )}
       </div>

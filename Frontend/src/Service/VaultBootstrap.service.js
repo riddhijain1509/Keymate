@@ -4,6 +4,7 @@ import {
   generateSalt,
   generateRecoveryKey,
   exportDEKToJwk,
+  importDEKFromJwk,
   importRecoveryKey,
   unwrapDEK,
   wrapDEK,
@@ -99,4 +100,53 @@ export const unlockVaultWithRecoveryService = async (recoveryKey, vaultMeta) => 
   const recoveryWrappingKey = await importRecoveryKey(recoveryKey);
   const dekJwk = await unwrapDEK(vaultMeta.recoveryKeyMeta.encryptedDEK, recoveryWrappingKey);
   return dekJwk;
+};
+
+export const rotateVaultKeysService = async (masterPassword, vaultKeyJwk) => {
+  const token = localStorage.getItem("accessToken");
+  const dek = await importDEKFromJwk(vaultKeyJwk);
+  const salt = generateSalt();
+  const recoveryKey = generateRecoveryKey();
+  const iterations = 310000;
+  const wrappingKey = await deriveWrappingKey(masterPassword, salt, iterations);
+  const encryptedDEK = await wrapDEK(dek, wrappingKey);
+  const recoveryWrappingKey = await importRecoveryKey(recoveryKey);
+  const recoveryKeyMeta = await wrapDEK(dek, recoveryWrappingKey);
+
+  const response = await fetch(`${backendURL}/users/vault/rotate`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      vaultKeyMeta: {
+        version: 2,
+        mode: "master-password",
+        encryptedDEK,
+        salt: btoa(String.fromCharCode(...salt)),
+        kdf: {
+          name: "PBKDF2",
+          hash: "SHA-256",
+          iterations,
+          keyLength: 256,
+        },
+        recoveryKeyMeta: {
+          version: 1,
+          mode: "recovery-key",
+          encryptedDEK: recoveryKeyMeta,
+        },
+      },
+    }),
+  });
+
+  const data = await response.json();
+  if (response.status !== 200) {
+    throw new Error(data?.message || "Failed to rotate vault keys");
+  }
+
+  return {
+    vaultMeta: data.data,
+    recoveryKey,
+  };
 };

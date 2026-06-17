@@ -215,4 +215,39 @@ const getVaultMeta = asyncHandler(async (req, res) => {
     );
 });
 
-export {registerUser,loginUser,logoutUser,refreshAccessToken,getCurrentUser,forgotPassword,resetPassword,setupVault,getVaultMeta };
+const rotateVault = asyncHandler(async (req, res) => {
+    const { vaultKeyMeta } = req.body;
+
+    if (
+        !vaultKeyMeta?.encryptedDEK ||
+        !vaultKeyMeta?.salt ||
+        !vaultKeyMeta?.kdf ||
+        !vaultKeyMeta?.recoveryKeyMeta?.encryptedDEK
+    ) {
+        return res.status(400).json(new ApiResponse(400, null, "Invalid vault metadata"));
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        return res.status(404).json(new ApiResponse(404, null, "User not found"));
+    }
+
+    if (!user.vaultKeyMeta?.encryptedDEK) {
+        return res.status(404).json(new ApiResponse(404, null, "Vault not initialized"));
+    }
+
+    user.vaultKeyMeta = {
+        version: vaultKeyMeta.version ?? 2,
+        mode: vaultKeyMeta.mode ?? "master-password",
+        encryptedDEK: vaultKeyMeta.encryptedDEK,
+        salt: vaultKeyMeta.salt,
+        kdf: vaultKeyMeta.kdf,
+        recoveryKeyMeta: vaultKeyMeta.recoveryKeyMeta,
+    };
+
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(200).json(new ApiResponse(200, user.vaultKeyMeta, "Vault keys rotated successfully"));
+});
+
+export {registerUser,loginUser,logoutUser,refreshAccessToken,getCurrentUser,forgotPassword,resetPassword,setupVault,getVaultMeta,rotateVault };
