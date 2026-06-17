@@ -7,6 +7,8 @@ import Loading from '../Loading/Loading.jsx'
 import { FiEdit } from "react-icons/fi";
 import Footer from "../Footer.jsx";
 import { IoArrowBack } from "react-icons/io5"; 
+import PasswordStrengthPanel from "../Password/PasswordStrengthPanel.jsx";
+import PasswordInput from "../Password/PasswordInput.jsx";
 
 const PasswordDetail = () => {
   const { id } = useParams();
@@ -86,12 +88,31 @@ const PasswordDetail = () => {
                   <p className="text-lg">
                     <strong>{fieldLabels[field]} :</strong>{" "}
                     {isEditing[field] ? (
-                      <input
-                        type={field === "password" ? "password" : "text"}
-                        value={editedData[field]}
-                        onChange={(e) => handleChange(field, e.target.value)}
-                        className="ml-2 px-2 py-1 text-black text-lg rounded-md"
-                      />
+                      <div className="mt-2 space-y-3">
+                        {field === "password" ? (
+                          <PasswordInput
+                            value={editedData[field]}
+                            onChange={(e) => handleChange(field, e.target.value)}
+                            placeholder="Password"
+                            className="bg-white text-black"
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            value={editedData[field]}
+                            onChange={(e) => handleChange(field, e.target.value)}
+                            className="ml-2 w-full rounded-md px-2 py-1 text-lg text-black"
+                          />
+                        )}
+                        {field === "password" && (
+                          <PasswordStrengthPanel
+                            value={editedData[field]}
+                            onUseSuggestion={(suggestedPassword) =>
+                              handleChange(field, suggestedPassword)
+                            }
+                          />
+                        )}
+                      </div>
                     ) : (
                       <span>{passwordData[field]}</span>
                     )}

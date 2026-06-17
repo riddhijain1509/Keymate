@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { registerUser } from "../../Service/Auth.service.js";
+import PasswordStrengthPanel from "../Password/PasswordStrengthPanel.jsx";
+import PasswordInput from "../Password/PasswordInput.jsx";
 
 function Register() {
   const [fullname, setFullname] = useState("");
@@ -53,13 +55,14 @@ function Register() {
             className="w-full px-4 py-3 rounded-lg bg-[#4D869C]/30 text-white focus:outline-none focus:ring-2 focus:ring-[#81c3d7]"
             required
           />
-          <input
-            type="password"
-            placeholder="Password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg bg-[#4D869C]/30 text-white focus:outline-none focus:ring-2 focus:ring-[#81c3d7]"
-            required
+            placeholder="Password"
+          />
+          <PasswordStrengthPanel
+            value={password}
+            onUseSuggestion={(suggestedPassword) => setPassword(suggestedPassword)}
           />
           <button
             type="submit"
