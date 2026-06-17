@@ -9,7 +9,27 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+function getPrivateKey() {
+  if (process.env.PRIVATE_KEY_BASE64) {
+    return Buffer.from(process.env.PRIVATE_KEY_BASE64, 'base64').toString('utf8');
+  }
+  if (process.env.PRIVATE_KEY) {
+    return process.env.PRIVATE_KEY;
+  }
+ 
+  const privateKeyPath = path.resolve(process.cwd(), 'Keys/privatekey.pem');
+  if (fs.existsSync(privateKeyPath)) {
+    return fs.readFileSync(privateKeyPath, 'utf8');
+  }
+  throw new Error("Private key not found in env or Keys/privatekey.pem");
+}
 
+function getPublicKey() {
+  if (process.env.PUBLIC_KEY) return process.env.PUBLIC_KEY;
+  const pubPath = path.resolve(process.cwd(), 'Keys/publickey.pem');
+  if (fs.existsSync(pubPath)) return fs.readFileSync(pubPath, 'utf8');
+  return null; 
+}
 export const addPassword = asyncHandler(async (req, res) => 
 {
     const {username,websiteName,websiteURL,encryptedpassword,email}=req.body;
@@ -151,63 +171,3 @@ export const getPassword = asyncHandler(async (req, res) => {
 });
 
 
-//TESTING FRONTEND------------------------------------------------------------
-
-export const encryptPassword = asyncHandler(async (req, res) => {
-    const { password } = req.body;
-
-    if (!password) {
-        return res.status(400).json({ error: "Password is required" });
-    }
-
-    try {
-        const publicKeyPath = path.resolve(__dirname, "../Keys/publickey.pem");
-        const publicKey = fs.readFileSync(publicKeyPath, "utf8");
-
-        const encryptedPassword = crypto.publicEncrypt(
-            {
-                key: publicKey,
-                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-                oaepHash: "sha256",
-            },
-            Buffer.from(password, "utf8")
-        ).toString("base64");
-
-        return res.status(200).json({ encryptedPassword });
-    } catch (error) {
-        console.error("Encryption failed:", error);
-        res.status(500).json({ error: "Failed to encrypt password" });
-    }
-});
-
-export const decryptPassword = asyncHandler(async (req, res) => {
-    const { encryptedPassword } = req.body;
-
-    if (!encryptedPassword) {
-        return res.status(400).json({ error: "Encrypted password is required" });
-    }
-
-    try {
-        const privateKeyPath = path.resolve(__dirname, "../Keys/privatekey.pem");
-        const privateKey = fs.readFileSync(privateKeyPath, "utf8");
-        let decryptedPassword;
-        try {
-            decryptedPassword = crypto.privateDecrypt(
-                {
-                    key: privateKey,
-                    padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-                    oaepHash: "sha256",
-                },
-                Buffer.from(encryptedPassword, "base64")
-            ).toString("utf8");
-        } catch (error) {
-            console.error("Decryption failed:", error);
-            return res.status(500).json({ error: "Failed to decrypt password" });
-        }
-
-        return res.status(200).json({ decryptedPassword });
-    } catch (error) {
-        console.error("Error decrypting password:", error);
-        return res.status(500).json({ error: "Failed to process request" });
-    }
-});

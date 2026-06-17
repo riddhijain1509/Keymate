@@ -11,7 +11,7 @@ router.route('/resetpassword/:token').post(resetPassword);
 
 //SECURED ROUTES
 router.route('/logout').post(verifyJWT,logoutUser);
-router.route('/refresh-token').post(verifyJWT,refreshAccessToken);
+router.route('/refresh-token').post(refreshAccessToken);
 router.route('/getcurrentuser').get(verifyJWT,getCurrentUser);
 
 export default router;

@@ -39,7 +39,7 @@ const loginUser= asyncHandler(async(req,res)=>{
     //vaildation
     if(!user)return res.status(400).json(new ApiResponse(400,null,"Invalid Email or User Does not exist"));
     const isPasswordValid=await user.isPasswordCorrect(password);
-    if(!isPasswordValid)res.status(400).json(new ApiResponse(400,null,"Invalid password"));
+    if(!isPasswordValid)return res.status(400).json(new ApiResponse(400,null,"Invalid password"));
     
     //token generation
     const {accessToken,refreshToken}=await generateAccessAndRefreshTokens(user._id);
@@ -135,7 +135,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
     if (!user)return res.status(404).json(new ApiResponse(404, null, "User not found"));
     const resetToken = crypto.randomBytes(32).toString("hex");
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpire = Date.now() + 360000000; 
+    user.resetPasswordExpire = Date.now() + 3600; 
     await user.save({ validateBeforeSave: false });
     const resetUrl = `${process.env.FRONT_END_URL}/setpassword/${resetToken}`;
     await sendEmail(

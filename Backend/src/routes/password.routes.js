@@ -10,8 +10,4 @@ router.route("/updatePassword/:passwordID").patch(verifyJWT, updatePassword);
 router.route("/allpasswords").get(verifyJWT, getallPasswords);
 router.route("/getpassword/:passwordID").post(verifyJWT, getPassword);
 
-//FRONTEND ROUTES TESTING
-router.route('/encryptPassword').post(encryptPassword);
-router.route('/decryptPassword').post(decryptPassword);
-
 export default router
