@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Dashboard from "../Dashboard";
-import { get_A_Password_Service, sanitizeKey, updatePassword_Service } from "../../Service/Password.service";
+import { get_A_Password_Service, updatePassword_Service } from "../../Service/Password.service";
 import { useSelector } from "react-redux";
 import Loading from '../Loading/Loading.jsx'
 import { FiEdit } from "react-icons/fi";
@@ -15,19 +15,22 @@ const PasswordDetail = () => {
   const [isEditing, setIsEditing] = useState({});
   const [editedData, setEditedData] = useState({});
 
-  const publicKey = useSelector((state) => sanitizeKey(state.publicKey));
-  const privateKey = useSelector((state) => state.privateKey);
+  const vaultKeyJwk = useSelector((state) => state.vaultKeyJwk);
+  const vaultReady = useSelector((state) => state.vaultReady);
 
   useEffect(() => {
     const fetchPassword = async () => {
-      const response = await get_A_Password_Service(id, publicKey, privateKey);
+      if (!vaultReady || !vaultKeyJwk) return;
+
+      const response = await get_A_Password_Service(id, vaultKeyJwk);
       if (response) {
         setPasswordData(response);
         setEditedData(response);
       } 
     };
+
     fetchPassword();
-  }, []);
+  }, [id, vaultKeyJwk, vaultReady]);
 
 
   const handleEditClick = (field) => {
@@ -39,13 +42,19 @@ const PasswordDetail = () => {
   };
 
   const handleSave = async () => {
+    if (!vaultReady || !vaultKeyJwk) return;
+
     const data = { ...editedData, id };
-    
-      const updatedResponse = await updatePassword_Service(data);
-      console.log(updatedResponse);
-      setPasswordData(updatedResponse.data);
-      setIsEditing({});
-    
+    const updatedResponse = await updatePassword_Service(data, vaultKeyJwk);
+
+    if (updatedResponse?.data) {
+      const refreshed = await get_A_Password_Service(updatedResponse.data._id, vaultKeyJwk);
+      if (refreshed) {
+        setPasswordData(refreshed);
+        setEditedData(refreshed);
+        setIsEditing({});
+      }
+    }
   };
 
   const fieldLabels = {

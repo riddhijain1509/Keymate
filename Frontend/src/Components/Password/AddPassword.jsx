@@ -1,8 +1,12 @@
 import { useState } from "react";
+import { useSelector } from "react-redux";
 import { addPassword_Service } from "../../Service/Password.service";
 import Dashboard from "../Dashboard";
+import Footer from "../Footer.jsx";
 
 const AddPassword = () => {
+    const vaultKeyJwk = useSelector((state) => state.vaultKeyJwk);
+    const vaultReady = useSelector((state) => state.vaultReady);
     const [formData, setFormData] = useState({
         username: "",
         websiteName: "",
@@ -18,7 +22,9 @@ const AddPassword = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const success = await addPassword_Service(formData);
+        if (!vaultReady || !vaultKeyJwk) return;
+
+        const success = await addPassword_Service(formData, vaultKeyJwk);
         if (success) {
             setFormData({ username: "", websiteName: "", websiteURL: "", email: "", password: "" });
         }
@@ -87,6 +93,7 @@ const AddPassword = () => {
                     </form>
                 </div>
             </div>
+            <Footer />
         </div>
     );
 };

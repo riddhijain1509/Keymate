@@ -1,37 +1,37 @@
 import { createSlice } from "@reduxjs/toolkit";
-import forge from "node-forge";
-
-const generateKeyPair = () => {
-    const keyPair = forge.pki.rsa.generateKeyPair({ bits: 2048 });
-    const privateKeyPem = forge.pki.privateKeyToPem(keyPair.privateKey);
-    const publicKeyPem = forge.pki.publicKeyToPem(keyPair.publicKey);
-    return { privateKey: privateKeyPem, publicKey: publicKeyPem };
-};
-
-const { privateKey, publicKey } = generateKeyPair();
 
 const initialState = {
-    privateKey,
-    publicKey,
+    vaultKeyJwk: null,
+    vaultReady: false,
+    vaultMode: "local-dev-dek",
 };
 
 export const keySlice = createSlice({
-    name: "keys",
+    name: "vault",
     initialState,
     reducers: {
-        regeneratePrivateKey: (state) => {
-            const newKeys = generateKeyPair();
-            return {
-                ...state,
-                privateKey: newKeys.privateKey,
-                publicKey: newKeys.publicKey,
-            };
+        setVaultKeyJwk: (state, action) => {
+            state.vaultKeyJwk = action.payload;
+            state.vaultReady = !!action.payload;
+        },
+        clearVaultKey: (state) => {
+            state.vaultKeyJwk = null;
+            state.vaultReady = false;
+        },
+        setVaultReady: (state, action) => {
+            state.vaultReady = action.payload;
+        },
+        setVaultMode: (state, action) => {
+            state.vaultMode = action.payload;
         },
     },
 });
 
-// Exporting reducers
-export const { regeneratePrivateKey } = keySlice.actions;
+export const {
+    setVaultKeyJwk,
+    clearVaultKey,
+    setVaultReady,
+    setVaultMode,
+} = keySlice.actions;
 
-// Connecting store with reducers
 export default keySlice.reducer;

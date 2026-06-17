@@ -36,6 +36,28 @@ const userSchema=new Schema({
     resetPasswordExpire: {
         type:Date,
     },
+    vaultKeyMeta: {
+        version: {
+            type: Number,
+            default: 1,
+        },
+        mode: {
+            type: String,
+            default: "local-dev-dek",
+        },
+        encryptedDEK: {
+            type: String,
+            default: null,
+        },
+        salt: {
+            type: String,
+            default: null,
+        },
+        kdf: {
+            type: Object,
+            default: null,
+        },
+    },
 },{timestamps:true});
 
 userSchema.pre("save",async function(next){

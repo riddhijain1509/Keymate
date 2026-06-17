@@ -1,5 +1,4 @@
 import React from 'react';
-import { FaShieldAlt } from "react-icons/fa"; 
 
 function Hero() {
     return (
@@ -9,7 +8,8 @@ function Hero() {
                     Secure & Manage Your <span className="text-[#81c3d7]">Passwords</span>
                 </h1>
                 <p className="text-base sm:text-lg mt-4 max-w-xl text-gray-200 animate-fadeIn">
-                    Keep all your credentials safe with <span className="font-bold">KeyMate</span>'s encrypted storage.
+                    Keep your credentials protected with <span className="font-bold">KeyMate</span>'s
+                    client-side encrypted vault.
                 </p>
                 
               <img 
@@ -22,13 +22,16 @@ function Hero() {
 
                 
                 <div className="my-16 sm:my-20 mb-32 sm:mb-40 text-gray-300 max-w-4xl sm:max-w-5xl text-lg sm:text-2xl text-center">
-                    <h2 className="text-3xl sm:text-4xl font-bold text-[#81c3d7] pb-4">Why is CipherPass Secure?</h2>
+                    <h2 className="text-3xl sm:text-4xl font-bold text-[#81c3d7] pb-4">Why is Keymate Secure?</h2>
                     <p className="mt-2">
-                        KeyMate encrypts your passwords using <span className="font-bold">RSA (Rivest-Shamir-Adleman)</span>, an industry-standard encryption algorithm. 
-                        Your credentials are stored securely using <span className="font-bold">asymmetric encryption</span>, ensuring that only you have access to your private keys.
+                        KeyMate now encrypts sensitive vault data directly in your browser before it is sent
+                        to the backend. The server stores only <span className="font-bold">ciphertext</span>,
+                        not plaintext passwords.
                     </p>
                     <p className="mt-2">
-                        You can also generate and manage your own <span className="font-bold">client-side RSA key pairs</span> to enhance security and control over your data.
+                        This Phase 1 architecture is designed to evolve into a full
+                        <span className="font-bold"> zero-knowledge vault</span> by keeping entry encryption
+                        on the client and separating it from future master-password-based key protection.
                     </p>
                 </div>
             </div>
