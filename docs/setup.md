@@ -46,6 +46,5 @@ VITE_BACKEND_URL=http://localhost:8000
 
 - The frontend reads the backend URL from `VITE_BACKEND_URL`.
 - The backend requires MongoDB and JWT secrets to start.
-- Redis is used for rate limiting, login failure tracking, and password-reset token TTL.
-- If `REDIS_URL` is not set, the app will still run, but those Redis-backed protections will fall back to no-op or legacy behavior.
+- Redis setup and production deployment details are documented in [Redis Guide](redis.md).
 - Vault unlock and password actions require a logged-in session.
