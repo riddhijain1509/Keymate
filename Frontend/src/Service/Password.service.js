@@ -1,6 +1,11 @@
 import { toast } from 'react-hot-toast';
-const backendURL = import.meta.env.VITE_BACKEND_URL;
-import forge from "node-forge";
+import {
+    decryptVaultPayload,
+    encryptVaultPayload,
+    importDEKFromJwk,
+} from "./VaultCrypto.service.js";
+
+const backendURL = import.meta.env?.VITE_BACKEND_URL;
 
 export const getAllPasswords_Service = async () => {
     try {
@@ -14,94 +19,34 @@ export const getAllPasswords_Service = async () => {
       });
       const data = await response.json();
       if (response.status === 200)return data.data;
-      else return {};
+      else return [];
     } 
-    catch (error) 
+    catch
     {
       toast.error('Failed to Load Passwords');
-      return null;
+      return [];
     }
 };
 
-const PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
-MIGeMA0GCSqGSIb3DQEBAQUAA4GMADCBiAKBgHSGCsDvqhLCCL+t9gOcc+5KyRhN
-r4IX1laBamQro+YxtGfJX/NSxSjb6W8MspGC0cGYm/w3rI7R5riKqjTGt2YOoDYC
-RUnlIZKBNp3wdnNv6qm3e5h/7NIu9dCcIRjfLJ/28osskgKwccnq010AHFsWljiO
-lekKkK5TFHFrpsR1AgMBAAE=
------END PUBLIC KEY-----`;
-
-const importPublicKey = async (pem) => {
-    const binaryDerString = atob(pem.replace(/(-----(BEGIN|END) PUBLIC KEY-----|\n)/g, ''));
-    const binaryDer = new Uint8Array(binaryDerString.length)
-        .map((_, i) => binaryDerString.charCodeAt(i));
-
-    return await window.crypto.subtle.importKey(
-        "spki",
-        binaryDer,
-        {
-            name: "RSA-OAEP",
-            hash: "SHA-256"
-        },
-        false,
-        ["encrypt"]
-    );
-};
-
-const encryptPassword = async (password) => {
+export const addPassword_Service = async ({username,websiteName,websiteURL,email,password}, vaultKeyJwk) => {
     try {
-        const publicKey = await importPublicKey(PUBLIC_KEY_PEM);
-        const encrypted = await window.crypto.subtle.encrypt(
-            {
-                name: "RSA-OAEP"
-            },
-            publicKey,
-            new TextEncoder().encode(password)
-        );
-        return btoa(String.fromCharCode(...new Uint8Array(encrypted))); 
-    } catch (error) {
-        return null;
-    }
-};
-
-
-export const importPrivateKey = (privateKeyPem) => {
-    try {
-        if (!privateKeyPem.includes("-----BEGIN RSA PRIVATE KEY-----")) {
-            throw new Error("Invalid Private Key Format");
-        }
-        const privateKey = forge.pki.privateKeyFromPem(privateKeyPem);
-        return privateKey;
-    } catch (error) {
-        throw error;
-    }
-};
-
-export const decryptPassword = (encryptedPassword, privateKeyPem) => {
-    try {
-        const privateKey = importPrivateKey(privateKeyPem);
-        const encryptedBytes = forge.util.decode64(encryptedPassword);
-        const encryptedBuffer = forge.util.createBuffer(encryptedBytes, "raw");
-        const decryptedPassword = privateKey.decrypt(encryptedBuffer.getBytes(), "RSA-OAEP", {
-            md: forge.md.sha256.create(), 
-        });
-        return decryptedPassword;
-    } catch (error) {
-        return null;
-    }
-};
-
-export const addPassword_Service = async ({username,websiteName,websiteURL,email,password}) => {
-    try {
+        if (!vaultKeyJwk) throw new Error("Vault is locked");
         const token = localStorage.getItem('accessToken');
-        const encryptedpassword=await encryptPassword(password);  
-        const userData={encryptedpassword,username,websiteName,websiteURL,email};
+        const dek = await importDEKFromJwk(vaultKeyJwk);
+        const encryptedPayload = await encryptVaultPayload({ username, email, password }, dek);
         const response = await fetch(`${backendURL}/password/addpassword`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify(userData),
+            body: JSON.stringify({
+                websiteName,
+                websiteURL,
+                ciphertext: encryptedPayload.ciphertext,
+                iv: encryptedPayload.iv,
+                version: encryptedPayload.version,
+            }),
         });
         
         if (response?.status === 201) 
@@ -115,58 +60,61 @@ export const addPassword_Service = async ({username,websiteName,websiteURL,email
             toast.error(data?.message || "Adding Password failed")
             return false;
         }
-    } catch (error) {
-        toast.error('Server Error');
-        console.error(error);
+    } catch (_error) {
+        toast.error(_error.message || 'Server Error');
+        console.error(_error);
         return false;
 }
 };
 
-export const sanitizeKey = (key) => {
-    return key
-        .replace(/-----BEGIN [A-Z ]+-----/g, '') 
-        .replace(/-----END [A-Z ]+-----/g, '')  
-        .replace(/\r?\n|\r/g, '')               
-        .trim();                                
-};
-
-export const get_A_Password_Service = async (id, publicKey,privateKey) => {
+export const get_A_Password_Service = async (id, vaultKeyJwk) => {
     try {
-        const token = localStorage.getItem('accessToken'); 
+        if (!vaultKeyJwk) throw new Error("Vault is locked");
+        const token = localStorage.getItem('accessToken');
+        const dek = await importDEKFromJwk(vaultKeyJwk);
         const response = await fetch(`${backendURL}/password/getpassword/${id}`, {
-            method: 'POST',
+            method: 'GET',
             headers: { 
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify({ text: publicKey }),
         });
 
         const data = await response.json();
-        const {encryptedPassword,websiteName,websiteURL,username,email}=data.data;
-        const password=decryptPassword(encryptedPassword,privateKey);
-        if (response.status === 200) return {password,websiteName,websiteURL,username,email};
-        else {
+
+        if (response.status !== 200) {
             toast.error("Error fetching Password");
             return null;
         }
-    } catch (error) {
-        toast.error('Server Error');
+
+        const decrypted = await decryptVaultPayload(data.data, dek);
+
+        return {
+            _id: data.data._id,
+            websiteName: data.data.websiteName,
+            websiteURL: data.data.websiteURL,
+            username: decrypted.username,
+            email: decrypted.email,
+            password: decrypted.password,
+        };
+    } catch (_error) {
+        toast.error(_error.message || 'Server Error');
         return false;
     }
 };
 
-export const updatePassword_Service = async (userData) => {
+export const updatePassword_Service = async (userData, vaultKeyJwk) => {
     try {
+  
+        if (!vaultKeyJwk) throw new Error("Vault is locked");
   
         const token = localStorage.getItem('accessToken');
         const {password,username,websiteName,websiteURL,email,id}=userData;
-        const toPass={};
-        if(password)toPass.password=await encryptPassword(password); 
-        if(username)toPass.username=username;
-        if(websiteName)toPass.websiteName=websiteName;
-        if(websiteURL)toPass.websiteURL=websiteURL;
-        if(email)toPass.email=email;
+        const dek = await importDEKFromJwk(vaultKeyJwk);
+        const encryptedPayload = await encryptVaultPayload(
+            { username, email, password },
+            dek
+        );
 
 
         const response = await fetch(`${backendURL}/password/updatePassword/${id}`, {
@@ -175,7 +123,13 @@ export const updatePassword_Service = async (userData) => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`,
             },
-            body: JSON.stringify(toPass),
+            body: JSON.stringify({
+                websiteName,
+                websiteURL,
+                ciphertext: encryptedPayload.ciphertext,
+                iv: encryptedPayload.iv,
+                version: encryptedPayload.version,
+            }),
         });
         
 
@@ -191,37 +145,35 @@ export const updatePassword_Service = async (userData) => {
             toast.error(data?.message || "Updating Password failed")
             return false;
         }
-    } catch (error) {
-        toast.error('Server Error');
-        console.error("Request failed:", error);
+    } catch (_error) {
+        toast.error(_error.message || 'Server Error');
+        console.error("Request failed:", _error);
         return false;
 }
 };
 
+export const delete_A_Password_Service = async (id) => {
+    try {
+        const token = localStorage.getItem('accessToken');
+        const response = await fetch(`${backendURL}/password/deletePassword/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
 
-// export const delete_A_Password_Service = async (id) => {
-//     try {
-//         const token = localStorage.getItem('accessToken');
-//         const response = await fetch(`${backendURL}/password/deletePassword/${id}`, {
-//             method: 'DELETE',
-//             headers: {
-//                 'Content-Type': 'application/json',
-//                 'Authorization': `Bearer ${token}`,
-//             },
-//         });
+        const data = await response.json();
 
-//         const data = await response.json();
+        if (response.status === 200) {
+            toast.success("Password deleted successfully");
+            return data;
+        }
 
-//         if (response.status === 200) {
-//             toast.success("Password deleted successfully");
-//             return data;
-//         } else {
-//             toast.error("Error deleting password");
-//             return null;
-//         }
-//     } catch (error) {
-//         toast.error("Server Error");
-//         return false;
-//     }
-// };
+        toast.error(data?.message || "Error deleting password");
+        return null;
+    } catch {
+        toast.error("Server Error");
+        return null;
+    }
+};
 

@@ -1,37 +1,49 @@
 import { createSlice } from "@reduxjs/toolkit";
-import forge from "node-forge";
-
-const generateKeyPair = () => {
-    const keyPair = forge.pki.rsa.generateKeyPair({ bits: 2048 });
-    const privateKeyPem = forge.pki.privateKeyToPem(keyPair.privateKey);
-    const publicKeyPem = forge.pki.publicKeyToPem(keyPair.publicKey);
-    return { privateKey: privateKeyPem, publicKey: publicKeyPem };
-};
-
-const { privateKey, publicKey } = generateKeyPair();
 
 const initialState = {
-    privateKey,
-    publicKey,
+    vaultMeta: null,
+    vaultMetaLoaded: false,
+    vaultKeyJwk: null,
+    vaultReady: false,
+    vaultMode: "uninitialized",
 };
 
 export const keySlice = createSlice({
-    name: "keys",
+    name: "vault",
     initialState,
     reducers: {
-        regeneratePrivateKey: (state) => {
-            const newKeys = generateKeyPair();
-            return {
-                ...state,
-                privateKey: newKeys.privateKey,
-                publicKey: newKeys.publicKey,
-            };
+        setVaultMeta: (state, action) => {
+            state.vaultMeta = action.payload;
+            state.vaultMetaLoaded = true;
+            state.vaultMode = action.payload?.mode || "uninitialized";
+        },
+        setVaultMetaLoaded: (state, action) => {
+            state.vaultMetaLoaded = action.payload;
+        },
+        setVaultKeyJwk: (state, action) => {
+            state.vaultKeyJwk = action.payload;
+            state.vaultReady = !!action.payload;
+        },
+        clearVaultKey: (state) => {
+            state.vaultKeyJwk = null;
+            state.vaultReady = false;
+        },
+        clearVaultState: (state) => {
+            state.vaultMeta = null;
+            state.vaultMetaLoaded = false;
+            state.vaultKeyJwk = null;
+            state.vaultReady = false;
+            state.vaultMode = "uninitialized";
         },
     },
 });
 
-// Exporting reducers
-export const { regeneratePrivateKey } = keySlice.actions;
+export const {
+    setVaultMeta,
+    setVaultMetaLoaded,
+    setVaultKeyJwk,
+    clearVaultKey,
+    clearVaultState,
+} = keySlice.actions;
 
-// Connecting store with reducers
 export default keySlice.reducer;

@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Dashboard from "../Dashboard";
-import { get_A_Password_Service, sanitizeKey, updatePassword_Service } from "../../Service/Password.service";
+import { get_A_Password_Service, updatePassword_Service } from "../../Service/Password.service";
 import { useSelector } from "react-redux";
 import Loading from '../Loading/Loading.jsx'
 import { FiEdit } from "react-icons/fi";
 import Footer from "../Footer.jsx";
 import { IoArrowBack } from "react-icons/io5"; 
+import PasswordStrengthPanel from "../Password/PasswordStrengthPanel.jsx";
+import PasswordInput from "../Password/PasswordInput.jsx";
 
 const PasswordDetail = () => {
   const { id } = useParams();
@@ -15,19 +17,22 @@ const PasswordDetail = () => {
   const [isEditing, setIsEditing] = useState({});
   const [editedData, setEditedData] = useState({});
 
-  const publicKey = useSelector((state) => sanitizeKey(state.publicKey));
-  const privateKey = useSelector((state) => state.privateKey);
+  const vaultKeyJwk = useSelector((state) => state.vaultKeyJwk);
+  const vaultReady = useSelector((state) => state.vaultReady);
 
   useEffect(() => {
     const fetchPassword = async () => {
-      const response = await get_A_Password_Service(id, publicKey, privateKey);
+      if (!vaultReady || !vaultKeyJwk) return;
+
+      const response = await get_A_Password_Service(id, vaultKeyJwk);
       if (response) {
         setPasswordData(response);
         setEditedData(response);
       } 
     };
+
     fetchPassword();
-  }, []);
+  }, [id, vaultKeyJwk, vaultReady]);
 
 
   const handleEditClick = (field) => {
@@ -39,13 +44,19 @@ const PasswordDetail = () => {
   };
 
   const handleSave = async () => {
+    if (!vaultReady || !vaultKeyJwk) return;
+
     const data = { ...editedData, id };
-    
-      const updatedResponse = await updatePassword_Service(data);
-      console.log(updatedResponse);
-      setPasswordData(updatedResponse.data);
-      setIsEditing({});
-    
+    const updatedResponse = await updatePassword_Service(data, vaultKeyJwk);
+
+    if (updatedResponse?.data) {
+      const refreshed = await get_A_Password_Service(updatedResponse.data._id, vaultKeyJwk);
+      if (refreshed) {
+        setPasswordData(refreshed);
+        setEditedData(refreshed);
+        setIsEditing({});
+      }
+    }
   };
 
   const fieldLabels = {
@@ -77,12 +88,31 @@ const PasswordDetail = () => {
                   <p className="text-lg">
                     <strong>{fieldLabels[field]} :</strong>{" "}
                     {isEditing[field] ? (
-                      <input
-                        type={field === "password" ? "password" : "text"}
-                        value={editedData[field]}
-                        onChange={(e) => handleChange(field, e.target.value)}
-                        className="ml-2 px-2 py-1 text-black text-lg rounded-md"
-                      />
+                      <div className="mt-2 space-y-3">
+                        {field === "password" ? (
+                          <PasswordInput
+                            value={editedData[field]}
+                            onChange={(e) => handleChange(field, e.target.value)}
+                            placeholder="Password"
+                            className="bg-white text-black"
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            value={editedData[field]}
+                            onChange={(e) => handleChange(field, e.target.value)}
+                            className="ml-2 w-full rounded-md px-2 py-1 text-lg text-black"
+                          />
+                        )}
+                        {field === "password" && (
+                          <PasswordStrengthPanel
+                            value={editedData[field]}
+                            onUseSuggestion={(suggestedPassword) =>
+                              handleChange(field, suggestedPassword)
+                            }
+                          />
+                        )}
+                      </div>
                     ) : (
                       <span>{passwordData[field]}</span>
                     )}

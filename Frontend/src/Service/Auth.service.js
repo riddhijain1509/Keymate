@@ -1,5 +1,5 @@
 import { toast } from 'react-hot-toast';
-const backendURL = import.meta.env.VITE_BACKEND_URL;
+const backendURL = import.meta.env?.VITE_BACKEND_URL;
 
 export const loginUser = async (userData) => {
     try {
@@ -25,10 +25,10 @@ export const loginUser = async (userData) => {
         return false;
       }
     } 
-    catch (error) 
+    catch (_error) 
     {
       toast.error('Server Error');
-      console.error(error);
+      console.error(_error);
       return false;
     }
 };
@@ -51,9 +51,9 @@ export const registerUser = async (userData) => {
         toast.error(data?.message || "Registration Failed")
         return false;
         }
-    } catch (error) {
+    } catch (_error) {
         toast.error('Server Error');
-        console.error(error);
+        console.error(_error);
         return false;
 }
 };
@@ -83,9 +83,9 @@ export const logoutUser = async () => {
       toast.error('Failed to log out');
       return false;
     }
-  } catch (error) {
+  } catch (_error) {
     toast.error('Server Error');
-    console.log(error);
+    console.log(_error);
     return false;
   }
 };
@@ -109,7 +109,7 @@ export const getMyProfile = async () => {
       return null;
     }
   } 
-  catch (error) 
+  catch
   {
     toast.error('Failed to Load Profile');
     return null;
@@ -145,8 +145,8 @@ export const refreshTokenService = async () => {
       localStorage.removeItem('user');
       return false;
     }
-  } catch (error) {
-    console.log(error);
+  } catch (_error) {
+    console.log(_error);
     return false;
   }
 };
@@ -167,8 +167,8 @@ export const forgotpassService = async (email) => {
           return { success: true, message: data.message };
       }
       toast.error("Try again");
-  } catch (error) {
-      console.error('Error in forgot password service:', error);
+  } catch (_error) {
+      console.error('Error in forgot password service:', _error);
       toast.error("Try again");
   }
 };
@@ -190,7 +190,7 @@ export const setPasswordService = async (password, token) => {
         }
 
         
-    } catch (error) {
-        return { success: false, message: error.message };
+    } catch (_error) {
+        return { success: false, message: _error.message };
     }
 };

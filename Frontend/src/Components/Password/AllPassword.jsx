@@ -8,12 +8,14 @@ import Footer from "../Footer.jsx";
 
 function AllPassword() {
     const [passwords, setPasswords] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
         const fetchData = async () => {
             const data = await getAllPasswords_Service();
-            setPasswords(data);
+            setPasswords(data || []);
+            setIsLoading(false);
         };
         fetchData();
     }, []);
@@ -23,7 +25,9 @@ function AllPassword() {
             <Dashboard />
     
             <div className="flex-grow">
-                {passwords.length > 0 ? (
+                {isLoading ? (
+                    <Loading />
+                ) : passwords.length > 0 ? (
                     <div className="flex flex-col items-center space-y-4 p-6 sm:p-10 w-full">
                         {passwords.map((item, index) => (
                             <div
@@ -50,7 +54,9 @@ function AllPassword() {
                         ))}
                     </div>
                 ) : (
-                    <Loading />
+                    <div className="flex h-full items-center justify-center px-6 py-20 text-center text-xl text-gray-200">
+                        No passwords saved yet. Add your first vault entry to get started.
+                    </div>
                 )}
             </div>
     

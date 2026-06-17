@@ -1,8 +1,14 @@
 import { useState } from "react";
+import { useSelector } from "react-redux";
 import { addPassword_Service } from "../../Service/Password.service";
 import Dashboard from "../Dashboard";
+import Footer from "../Footer.jsx";
+import PasswordStrengthPanel from "./PasswordStrengthPanel.jsx";
+import PasswordInput from "./PasswordInput.jsx";
 
 const AddPassword = () => {
+    const vaultKeyJwk = useSelector((state) => state.vaultKeyJwk);
+    const vaultReady = useSelector((state) => state.vaultReady);
     const [formData, setFormData] = useState({
         username: "",
         websiteName: "",
@@ -18,7 +24,9 @@ const AddPassword = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const success = await addPassword_Service(formData);
+        if (!vaultReady || !vaultKeyJwk) return;
+
+        const success = await addPassword_Service(formData, vaultKeyJwk);
         if (success) {
             setFormData({ username: "", websiteName: "", websiteURL: "", email: "", password: "" });
         }
@@ -69,14 +77,17 @@ const AddPassword = () => {
                             className="w-full p-4 text-lg border border-gray-400 bg-gray-700 text-white rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-400 placeholder-gray-400 placeholder-opacity-50"
                             required
                         />
-                        <input
-                            type="password"
+                        <PasswordInput
                             name="password"
                             placeholder="Password"
                             value={formData.password}
                             onChange={handleChange}
-                            className="w-full p-4 text-lg border border-gray-400 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-400 placeholder-gray-400 placeholder-opacity-50"
-                            required
+                        />
+                        <PasswordStrengthPanel
+                            value={formData.password}
+                            onUseSuggestion={(suggestedPassword) =>
+                                setFormData((prev) => ({ ...prev, password: suggestedPassword }))
+                            }
                         />
                         <button
                             type="submit"
@@ -87,6 +98,7 @@ const AddPassword = () => {
                     </form>
                 </div>
             </div>
+            <Footer />
         </div>
     );
 };

@@ -8,9 +8,9 @@ import { store } from './Store/store.js'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-  <Provider store={store}>
-    <Toaster position='bottom-right' toastOptions={{duration:3000}}/>
-    <App />
-  </Provider>
+    <Provider store={store}>
+      <Toaster position='bottom-right' toastOptions={{duration:3000}}/>
+      <App />
+    </Provider>
   </StrictMode>,
 )

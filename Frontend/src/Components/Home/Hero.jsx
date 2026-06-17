@@ -1,39 +1,97 @@
-import React from 'react';
-import { FaShieldAlt } from "react-icons/fa"; 
+import React from "react";
+import { Link } from "react-router-dom";
 
 function Hero() {
-    return (
-        <>
-            <div className="flex flex-col items-center justify-center flex-grow px-6 text-center pt-10 mt-36">
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight text-white animate-fadeIn">
-                    Secure & Manage Your <span className="text-[#81c3d7]">Passwords</span>
-                </h1>
-                <p className="text-base sm:text-lg mt-4 max-w-xl text-gray-200 animate-fadeIn">
-                    Keep all your credentials safe with <span className="font-bold">KeyMate</span>'s encrypted storage.
-                </p>
-                
-              <img 
-                src="/mainele.gif" 
-                alt="Security Illustration"
-                className="mt-10 sm:mt-12 md:mt-16 w-[70%] sm:w-[50%] md:w-[500px] h-auto rounded-lg"
-                />
+  return (
+    <section className="relative flex flex-1 items-center overflow-hidden px-6 py-16 sm:py-20 lg:px-10">
+      <div className="absolute inset-0 -z-10">
+        <div className="absolute left-1/2 top-0 h-72 w-72 -translate-x-1/2 rounded-full bg-[#81c3d7]/20 blur-3xl" />
+        <div className="absolute right-0 top-32 h-80 w-80 rounded-full bg-[#3A7CA5]/20 blur-3xl" />
+        <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-[#082d3c]/30 blur-3xl" />
+      </div>
 
+      <div className="mx-auto grid w-full max-w-7xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="space-y-8 text-center lg:text-left">
+          <div className="inline-flex items-center rounded-full border border-[#81c3d7]/40 bg-white/5 px-4 py-2 text-sm font-medium text-[#d5f4ff] shadow-lg shadow-black/10 backdrop-blur">
+            Client-side encryption, built for zero-knowledge from the start
+          </div>
 
+          <div className="space-y-4">
+            <h1 className="text-4xl font-extrabold leading-tight text-white sm:text-5xl lg:text-6xl">
+              Protect your passwords with a vault that keeps{" "}
+              <span className="text-[#81c3d7]">ciphertext on the server</span>
+            </h1>
+            <p className="mx-auto max-w-2xl text-base leading-7 text-slate-200 sm:text-lg lg:mx-0">
+              KeyMate encrypts sensitive vault data in your browser before it ever reaches the
+              backend. Your master password protects the vault key, while recovery support keeps
+              access resilient without exposing plaintext.
+            </p>
+          </div>
 
-                
-                <div className="my-16 sm:my-20 mb-32 sm:mb-40 text-gray-300 max-w-4xl sm:max-w-5xl text-lg sm:text-2xl text-center">
-                    <h2 className="text-3xl sm:text-4xl font-bold text-[#81c3d7] pb-4">Why is CipherPass Secure?</h2>
-                    <p className="mt-2">
-                        KeyMate encrypts your passwords using <span className="font-bold">RSA (Rivest-Shamir-Adleman)</span>, an industry-standard encryption algorithm. 
-                        Your credentials are stored securely using <span className="font-bold">asymmetric encryption</span>, ensuring that only you have access to your private keys.
-                    </p>
-                    <p className="mt-2">
-                        You can also generate and manage your own <span className="font-bold">client-side RSA key pairs</span> to enhance security and control over your data.
-                    </p>
-                </div>
+          <div className="flex flex-col items-center gap-4 sm:flex-row lg:justify-start">
+            <Link
+              to="/register"
+              className="rounded-full bg-[#81c3d7] px-7 py-3 text-base font-semibold text-[#082d3c] shadow-xl shadow-[#81c3d7]/30 transition-transform hover:-translate-y-0.5 hover:bg-[#a7d8e6]"
+            >
+              Get Started
+            </Link>
+            <Link
+              to="/login"
+              className="rounded-full border border-white/20 bg-white/5 px-7 py-3 text-base font-semibold text-white backdrop-blur transition-transform hover:-translate-y-0.5 hover:bg-white/10"
+            >
+              Sign In
+            </Link>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-left backdrop-blur">
+              <div className="text-sm text-slate-300">Browser-side</div>
+              <div className="mt-1 text-lg font-semibold text-white">AES-GCM encryption</div>
             </div>
-        </>
-    )
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-left backdrop-blur">
+              <div className="text-sm text-slate-300">Vault key</div>
+              <div className="mt-1 text-lg font-semibold text-white">Protected by KDF + recovery</div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-left backdrop-blur">
+              <div className="text-sm text-slate-300">Server data</div>
+              <div className="mt-1 text-lg font-semibold text-white">Ciphertext only</div>
+            </div>
+          </div>
+
+          <p className="max-w-2xl text-sm leading-6 text-slate-300 lg:mx-0">
+            This layout keeps the product story simple: encrypt locally, store safely, and make
+            future zero-knowledge upgrades possible without changing how password entries are
+            encrypted.
+          </p>
+        </div>
+
+        <div className="relative mx-auto w-full max-w-xl">
+          <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-[#81c3d7]/20 via-transparent to-[#3A7CA5]/20 blur-2xl" />
+          <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#101737]/70 p-4 shadow-2xl shadow-black/30 backdrop-blur">
+            <img
+              src="/mainele.gif"
+              alt="Security illustration"
+              className="h-auto w-full rounded-[1.5rem] object-cover"
+            />
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-[#81c3d7]">Phase 1</div>
+                <div className="mt-2 text-sm text-slate-200">
+                  Encrypt entries in the browser before sending anything to the backend.
+                </div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-[#81c3d7]">Phase 2+</div>
+                <div className="mt-2 text-sm text-slate-200">
+                  Keep entry encryption stable while key protection evolves.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export default Hero;
