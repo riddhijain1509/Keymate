@@ -33,6 +33,7 @@ function Dashboard() {
     const handleLogout = async () => {
         setIsLoggedIn(false);
         await logoutUser();
+        sessionStorage.removeItem("keymate_pending_recovery_key");
         dispatch(clearVaultState());
         navigate("/");
     };

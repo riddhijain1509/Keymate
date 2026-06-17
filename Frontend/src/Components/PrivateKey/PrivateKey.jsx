@@ -11,12 +11,14 @@ import Footer from "../Footer.jsx";
 import {
   fetchVaultMetaService,
   setupVaultService,
+  unlockVaultWithRecoveryService,
   unlockVaultService,
 } from "../../Service/VaultBootstrap.service.js";
 import { useNavigate } from "react-router-dom";
 import { checkisloggedIn } from "../../Service/Auth.service.js";
 
 const PrivateKey = () => {
+  const pendingRecoveryStorageKey = "keymate_pending_recovery_key";
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const vaultMode = useSelector((state) => state.vaultMode);
@@ -26,6 +28,10 @@ const PrivateKey = () => {
   const [masterPassword, setMasterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [unlockPassword, setUnlockPassword] = useState("");
+  const [recoveryKeyInput, setRecoveryKeyInput] = useState("");
+  const [unlockMethod, setUnlockMethod] = useState("master");
+  const [recoveryKeyReveal, setRecoveryKeyReveal] = useState("");
+  const [showRecoveryReveal, setShowRecoveryReveal] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
@@ -39,10 +45,16 @@ const PrivateKey = () => {
         const metaResponse = await fetchVaultMetaService();
         dispatch(setVaultMeta(metaResponse?.vaultKeyMeta ?? null));
       }
+
+      const pendingRecoveryKey = sessionStorage.getItem(pendingRecoveryStorageKey);
+      if (pendingRecoveryKey && !showRecoveryReveal) {
+        setRecoveryKeyReveal(pendingRecoveryKey);
+        setShowRecoveryReveal(true);
+      }
     };
 
     init();
-  }, [dispatch, navigate, vaultMetaLoaded]);
+  }, [dispatch, navigate, vaultMetaLoaded, showRecoveryReveal]);
 
   const hasVault = !!vaultMeta?.encryptedDEK;
 
@@ -58,8 +70,10 @@ const PrivateKey = () => {
       const result = await setupVaultService(masterPassword);
       dispatch(setVaultMeta(result.vaultMeta));
       dispatch(setVaultKeyJwk(result.vaultKeyJwk));
-      toast.success("Vault created and unlocked");
-      navigate("/passwords");
+      sessionStorage.setItem(pendingRecoveryStorageKey, result.recoveryKey);
+      setRecoveryKeyReveal(result.recoveryKey);
+      setShowRecoveryReveal(true);
+      toast.success("Vault created");
     } catch (error) {
       toast.error(error.message || "Failed to create vault");
     } finally {
@@ -69,11 +83,15 @@ const PrivateKey = () => {
 
   const handleUnlockVault = async (e) => {
     e.preventDefault();
-    if (!unlockPassword) return;
+    if (unlockMethod === "master" && !unlockPassword) return;
+    if (unlockMethod === "recovery" && !recoveryKeyInput) return;
 
     try {
       setIsBusy(true);
-      const dekJwk = await unlockVaultService(unlockPassword, vaultMeta);
+      const dekJwk =
+        unlockMethod === "master"
+          ? await unlockVaultService(unlockPassword, vaultMeta)
+          : await unlockVaultWithRecoveryService(recoveryKeyInput, vaultMeta);
       dispatch(setVaultKeyJwk(dekJwk));
       toast.success("Vault unlocked");
       navigate("/passwords");
@@ -86,6 +104,8 @@ const PrivateKey = () => {
 
   const handleLockVault = () => {
     dispatch(clearVaultKey());
+    setUnlockPassword("");
+    setRecoveryKeyInput("");
     toast.success("Vault locked");
   };
 
@@ -102,7 +122,41 @@ const PrivateKey = () => {
       <Dashboard />
 
       <div className="flex-grow flex flex-col justify-center items-center px-6 py-10">
-        {!hasVault ? (
+        {showRecoveryReveal && recoveryKeyReveal ? (
+          <div className="w-full max-w-5xl rounded-2xl border border-[#4D869C] bg-gray-800 p-8 shadow-lg">
+            <h2 className="text-center text-3xl font-semibold">Save Recovery Key</h2>
+            <p className="mt-4 text-center text-gray-300">
+              This key can unlock your vault if you forget the master password. Save it offline.
+            </p>
+            <textarea
+              readOnly
+              value={recoveryKeyReveal}
+              rows={4}
+              className="mt-6 w-full rounded-lg bg-gray-700 p-3 text-white outline-none resize-none"
+            />
+            <div className="mt-6 flex flex-wrap gap-4">
+              <button
+                type="button"
+                onClick={() => navigator.clipboard.writeText(recoveryKeyReveal)}
+                className="rounded-lg bg-[#3A7CA5] px-6 py-3 font-semibold text-white shadow-lg shadow-[#3A7CA5]/40 transition-all hover:bg-[#81c3d7]"
+              >
+                Copy Recovery Key
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  sessionStorage.removeItem(pendingRecoveryStorageKey);
+                  setShowRecoveryReveal(false);
+                  setRecoveryKeyReveal("");
+                  navigate("/passwords");
+                }}
+                className="rounded-lg bg-[#082d3c] px-6 py-3 font-semibold text-white shadow-lg shadow-[#082d3c]/40 transition-all hover:bg-[#3B6F87]"
+              >
+                I Saved It
+              </button>
+            </div>
+          </div>
+        ) : !hasVault ? (
           <div className="w-full max-w-5xl rounded-2xl border border-[#4D869C] bg-gray-800 p-8 shadow-lg">
             <h2 className="text-center text-3xl font-semibold">Create Vault</h2>
             <p className="mt-4 text-center text-gray-300">
@@ -138,20 +192,55 @@ const PrivateKey = () => {
           <div className="w-full max-w-5xl rounded-2xl border border-[#4D869C] bg-gray-800 p-8 shadow-lg">
             <h2 className="text-center text-3xl font-semibold">Unlock Vault</h2>
             <p className="mt-4 text-center text-gray-300">
-              Enter your master password to unwrap the DEK for this session.
+              Enter your master password or recovery key to unwrap the DEK for this session.
             </p>
             <p className="mt-4 rounded-lg border border-amber-400/40 bg-amber-500/10 p-4 text-sm text-amber-100">
               Vault mode: <span className="font-semibold text-white">{vaultMode}</span>
             </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setUnlockMethod("master")}
+                className={`rounded-lg px-4 py-2 font-semibold ${
+                  unlockMethod === "master"
+                    ? "bg-[#3A7CA5] text-white"
+                    : "bg-gray-700 text-gray-200"
+                }`}
+              >
+                Master Password
+              </button>
+              <button
+                type="button"
+                onClick={() => setUnlockMethod("recovery")}
+                className={`rounded-lg px-4 py-2 font-semibold ${
+                  unlockMethod === "recovery"
+                    ? "bg-[#3A7CA5] text-white"
+                    : "bg-gray-700 text-gray-200"
+                }`}
+              >
+                Recovery Key
+              </button>
+            </div>
             <form onSubmit={handleUnlockVault} className="mt-8 space-y-4">
-              <input
-                type="password"
-                placeholder="Master password"
-                value={unlockPassword}
-                onChange={(e) => setUnlockPassword(e.target.value)}
-                className="w-full rounded-lg bg-gray-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#81c3d7]"
-                required
-              />
+              {unlockMethod === "master" ? (
+                <input
+                  type="password"
+                  placeholder="Master password"
+                  value={unlockPassword}
+                  onChange={(e) => setUnlockPassword(e.target.value)}
+                  className="w-full rounded-lg bg-gray-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#81c3d7]"
+                  required
+                />
+              ) : (
+                <textarea
+                  placeholder="Recovery key"
+                  value={recoveryKeyInput}
+                  onChange={(e) => setRecoveryKeyInput(e.target.value.trim())}
+                  rows={4}
+                  className="w-full rounded-lg bg-gray-700 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#81c3d7]"
+                  required
+                />
+              )}
               <button
                 type="submit"
                 disabled={isBusy}

@@ -23,6 +23,17 @@ const base64ToUint8Array = (base64) => {
   return bytes;
 };
 
+const hexToUint8Array = (hex) => {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i += 1) {
+    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return bytes;
+};
+
+const uint8ArrayToHex = (bytes) =>
+  Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+
 export const generateDEK = async () => {
   return window.crypto.subtle.generateKey(
     {
@@ -35,6 +46,11 @@ export const generateDEK = async () => {
 };
 
 export const generateSalt = () => window.crypto.getRandomValues(new Uint8Array(16));
+
+export const generateRecoveryKey = () => {
+  const bytes = window.crypto.getRandomValues(new Uint8Array(32));
+  return uint8ArrayToHex(bytes);
+};
 
 export const exportDEKToJwk = async (key) => {
   return window.crypto.subtle.exportKey("jwk", key);
@@ -78,10 +94,21 @@ export const deriveWrappingKey = async (masterPassword, salt, iterations = 31000
   );
 };
 
-export const wrapDEK = async (dek, wrappingKey) => {
-  const dekJwk = await exportDEKToJwk(dek);
+export const importRecoveryKey = async (recoveryKey) => {
+  return window.crypto.subtle.importKey(
+    "raw",
+    hexToUint8Array(recoveryKey),
+    {
+      name: "AES-GCM",
+    },
+    true,
+    ["encrypt", "decrypt"]
+  );
+};
+
+export const wrapSecretWithKey = async (secret, wrappingKey) => {
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
-  const plaintext = textEncoder.encode(JSON.stringify(dekJwk));
+  const plaintext = textEncoder.encode(JSON.stringify(secret));
 
   const ciphertext = await window.crypto.subtle.encrypt(
     {
@@ -99,17 +126,26 @@ export const wrapDEK = async (dek, wrappingKey) => {
   };
 };
 
-export const unwrapDEK = async (encryptedDEK, wrappingKey) => {
+export const wrapDEK = async (dek, wrappingKey) => {
+  const dekJwk = await exportDEKToJwk(dek);
+  return wrapSecretWithKey(dekJwk, wrappingKey);
+};
+
+export const unwrapSecretWithKey = async (encryptedSecret, wrappingKey) => {
   const decrypted = await window.crypto.subtle.decrypt(
     {
       name: "AES-GCM",
-      iv: base64ToUint8Array(encryptedDEK.iv),
+      iv: base64ToUint8Array(encryptedSecret.iv),
     },
     wrappingKey,
-    base64ToUint8Array(encryptedDEK.ciphertext)
+    base64ToUint8Array(encryptedSecret.ciphertext)
   );
 
   return JSON.parse(textDecoder.decode(decrypted));
+};
+
+export const unwrapDEK = async (encryptedDEK, wrappingKey) => {
+  return unwrapSecretWithKey(encryptedDEK, wrappingKey);
 };
 
 export const encryptVaultPayload = async (payload, dek) => {

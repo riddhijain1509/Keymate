@@ -2,7 +2,9 @@ import {
   deriveWrappingKey,
   generateDEK,
   generateSalt,
+  generateRecoveryKey,
   exportDEKToJwk,
+  importRecoveryKey,
   unwrapDEK,
   wrapDEK,
 } from "./VaultCrypto.service.js";
@@ -28,9 +30,12 @@ export const setupVaultService = async (masterPassword) => {
   const token = localStorage.getItem("accessToken");
   const dek = await generateDEK();
   const salt = generateSalt();
+  const recoveryKey = generateRecoveryKey();
   const iterations = 310000;
   const wrappingKey = await deriveWrappingKey(masterPassword, salt, iterations);
   const encryptedDEK = await wrapDEK(dek, wrappingKey);
+  const recoveryWrappingKey = await importRecoveryKey(recoveryKey);
+  const recoveryKeyMeta = await wrapDEK(dek, recoveryWrappingKey);
 
   const response = await fetch(`${backendURL}/users/vault/setup`, {
     method: "POST",
@@ -50,6 +55,11 @@ export const setupVaultService = async (masterPassword) => {
           iterations,
           keyLength: 256,
         },
+        recoveryKeyMeta: {
+          version: 1,
+          mode: "recovery-key",
+          encryptedDEK: recoveryKeyMeta,
+        },
       },
     }),
   });
@@ -62,6 +72,7 @@ export const setupVaultService = async (masterPassword) => {
   return {
     vaultMeta: data.data,
     vaultKeyJwk: await exportDEKToJwk(dek),
+    recoveryKey,
   };
 };
 
@@ -77,5 +88,15 @@ export const unlockVaultService = async (masterPassword, vaultMeta) => {
     vaultMeta.kdf.iterations
   );
   const dekJwk = await unwrapDEK(vaultMeta.encryptedDEK, wrappingKey);
+  return dekJwk;
+};
+
+export const unlockVaultWithRecoveryService = async (recoveryKey, vaultMeta) => {
+  if (!vaultMeta?.recoveryKeyMeta?.encryptedDEK) {
+    throw new Error("Recovery key metadata is missing");
+  }
+
+  const recoveryWrappingKey = await importRecoveryKey(recoveryKey);
+  const dekJwk = await unwrapDEK(vaultMeta.recoveryKeyMeta.encryptedDEK, recoveryWrappingKey);
   return dekJwk;
 };

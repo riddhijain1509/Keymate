@@ -166,7 +166,12 @@ const resetPassword = asyncHandler(async (req, res) => {
 const setupVault = asyncHandler(async (req, res) => {
     const { vaultKeyMeta } = req.body;
 
-    if (!vaultKeyMeta?.encryptedDEK || !vaultKeyMeta?.salt || !vaultKeyMeta?.kdf) {
+    if (
+        !vaultKeyMeta?.encryptedDEK ||
+        !vaultKeyMeta?.salt ||
+        !vaultKeyMeta?.kdf ||
+        !vaultKeyMeta?.recoveryKeyMeta?.encryptedDEK
+    ) {
         return res.status(400).json(new ApiResponse(400, null, "Invalid vault metadata"));
     }
 
@@ -185,6 +190,7 @@ const setupVault = asyncHandler(async (req, res) => {
         encryptedDEK: vaultKeyMeta.encryptedDEK,
         salt: vaultKeyMeta.salt,
         kdf: vaultKeyMeta.kdf,
+        recoveryKeyMeta: vaultKeyMeta.recoveryKeyMeta,
     };
 
     await user.save({ validateBeforeSave: false });

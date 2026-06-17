@@ -57,6 +57,10 @@ const userSchema=new Schema({
             type: Object,
             default: null,
         },
+        recoveryKeyMeta: {
+            type: Object,
+            default: null,
+        },
     },
 },{timestamps:true});
 
