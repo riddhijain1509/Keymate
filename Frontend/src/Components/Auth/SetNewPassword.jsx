@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { setPasswordService } from "../../Service/Auth.service.js";
+import PasswordStrengthPanel from "../Password/PasswordStrengthPanel.jsx";
+import PasswordInput from "../Password/PasswordInput.jsx";
 
 function SetNewPassword() {
   const [password, setPassword] = useState("");
@@ -36,21 +38,19 @@ function SetNewPassword() {
       <div className="bg-[#253054] p-10 py-16 rounded-2xl shadow-xl w-96">
         <h2 className="text-3xl font-bold text-center mb-6">Set New Password</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="password"
-            placeholder="Enter new password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg bg-[#4D869C]/30 text-white focus:outline-none focus:ring-2 focus:ring-[#81c3d7]"
-            required
+            placeholder="Enter new password"
           />
-          <input
-            type="password"
-            placeholder="Confirm new password"
+          <PasswordStrengthPanel
+            value={password}
+            onUseSuggestion={(suggestedPassword) => setPassword(suggestedPassword)}
+          />
+          <PasswordInput
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg bg-[#4D869C]/30 text-white focus:outline-none focus:ring-2 focus:ring-[#81c3d7]"
-            required
+            placeholder="Confirm new password"
           />
 
           {error && <p className="text-red-400 text-center text-sm">{error}</p>}

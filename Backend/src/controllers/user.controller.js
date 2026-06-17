@@ -26,7 +26,7 @@ const registerUser= asyncHandler( async (req,res)=>{
     });
     if(existedUser)return res.status(400).json(new ApiResponse(400,null,"User already exists"));
     const user=await User.create({fullname,email,password,username});
-    const createUser= await User.findById(user._id).select("-password -refreshToken");
+    const createUser= await User.findById(user._id).select("-password -refreshToken -vaultKeyMeta");
     if(!createUser)return res.status(400).json(new ApiResponse(400,null,"Server Error"));
     return res.status(200).json(new ApiResponse(200,createUser,"Registered Successfully"))
 });
@@ -43,7 +43,7 @@ const loginUser= asyncHandler(async(req,res)=>{
     
     //token generation
     const {accessToken,refreshToken}=await generateAccessAndRefreshTokens(user._id);
-    const loggedInUser=await User.findById(user._id).select("-password -refreshToken");
+    const loggedInUser=await User.findById(user._id).select("-password -refreshToken -vaultKeyMeta");
     
     const options={
         httpOnly:true,          
@@ -119,6 +119,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
             $project: {
                 password: 0 ,
                 refreshToken:0,
+                vaultKeyMeta:0,
                 _id:0
             }
         }
@@ -162,4 +163,91 @@ const resetPassword = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, null, "Password reset successful"));
 });
 
-export {registerUser,loginUser,logoutUser,refreshAccessToken,getCurrentUser,forgotPassword,resetPassword };
+const setupVault = asyncHandler(async (req, res) => {
+    const { vaultKeyMeta } = req.body;
+
+    if (
+        !vaultKeyMeta?.encryptedDEK ||
+        !vaultKeyMeta?.salt ||
+        !vaultKeyMeta?.kdf ||
+        !vaultKeyMeta?.recoveryKeyMeta?.encryptedDEK
+    ) {
+        return res.status(400).json(new ApiResponse(400, null, "Invalid vault metadata"));
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        return res.status(404).json(new ApiResponse(404, null, "User not found"));
+    }
+
+    if (user.vaultKeyMeta?.encryptedDEK) {
+        return res.status(409).json(new ApiResponse(409, null, "Vault already initialized"));
+    }
+
+    user.vaultKeyMeta = {
+        version: vaultKeyMeta.version ?? 2,
+        mode: vaultKeyMeta.mode ?? "master-password",
+        encryptedDEK: vaultKeyMeta.encryptedDEK,
+        salt: vaultKeyMeta.salt,
+        kdf: vaultKeyMeta.kdf,
+        recoveryKeyMeta: vaultKeyMeta.recoveryKeyMeta,
+    };
+
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(200).json(new ApiResponse(200, user.vaultKeyMeta, "Vault setup saved successfully"));
+});
+
+const getVaultMeta = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user._id).select("vaultKeyMeta");
+    if (!user) {
+        return res.status(404).json(new ApiResponse(404, null, "User not found"));
+    }
+
+    if (!user.vaultKeyMeta?.encryptedDEK) {
+        return res.status(200).json(
+            new ApiResponse(200, { hasVault: false, vaultKeyMeta: null }, "Vault not initialized")
+        );
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, { hasVault: true, vaultKeyMeta: user.vaultKeyMeta }, "Vault metadata fetched successfully")
+    );
+});
+
+const rotateVault = asyncHandler(async (req, res) => {
+    const { vaultKeyMeta } = req.body;
+
+    if (
+        !vaultKeyMeta?.encryptedDEK ||
+        !vaultKeyMeta?.salt ||
+        !vaultKeyMeta?.kdf ||
+        !vaultKeyMeta?.recoveryKeyMeta?.encryptedDEK
+    ) {
+        return res.status(400).json(new ApiResponse(400, null, "Invalid vault metadata"));
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+        return res.status(404).json(new ApiResponse(404, null, "User not found"));
+    }
+
+    if (!user.vaultKeyMeta?.encryptedDEK) {
+        return res.status(404).json(new ApiResponse(404, null, "Vault not initialized"));
+    }
+
+    user.vaultKeyMeta = {
+        version: vaultKeyMeta.version ?? 2,
+        mode: vaultKeyMeta.mode ?? "master-password",
+        encryptedDEK: vaultKeyMeta.encryptedDEK,
+        salt: vaultKeyMeta.salt,
+        kdf: vaultKeyMeta.kdf,
+        recoveryKeyMeta: vaultKeyMeta.recoveryKeyMeta,
+    };
+
+    await user.save({ validateBeforeSave: false });
+
+    return res.status(200).json(new ApiResponse(200, user.vaultKeyMeta, "Vault keys rotated successfully"));
+});
+
+export {registerUser,loginUser,logoutUser,refreshAccessToken,getCurrentUser,forgotPassword,resetPassword,setupVault,getVaultMeta,rotateVault };

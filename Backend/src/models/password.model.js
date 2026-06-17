@@ -1,32 +1,37 @@
 import mongoose,{Schema} from 'mongoose'
 
-const passwordSchema = new Schema({
-    user:{
+const passwordSchema = new Schema(
+  {
+    user: {
       type: Schema.Types.ObjectId,
-      ref:'User',
+      ref: 'User',
       required: true,
+      index: true,
     },
     websiteURL: {
       type: String,
       trim: true,
+      required: true,
     },
     websiteName: {
       type: String,
       trim: true,
+      required: true,
     },
-    username: {
-      type: String,
-      trim: true,
-    },
-    password: {
+    ciphertext: {
       type: String,
       required: true,
-      trim: true,
     },
-    email: {
+    iv: {
       type: String,
-      trim: true,
-    }
-  })
+      required: true,
+    },
+    version: {
+      type: Number,
+      default: 1,
+    },
+  },
+  { timestamps: true }
+)
 
 export const Password=mongoose.model('Password',passwordSchema);
