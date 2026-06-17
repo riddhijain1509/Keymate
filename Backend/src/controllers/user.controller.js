@@ -5,6 +5,13 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from 'jsonwebtoken';
 import sendEmail from '../utils/sendemail.js'
 import crypto from 'crypto';
+import {
+    clearFailedLoginAttempts,
+    consumeResetToken,
+    getClientIp,
+    recordFailedLoginAttempt,
+    storeResetToken,
+} from "../utils/redisAuth.js";
 
 const generateAccessAndRefreshTokens = async(userId)=>{
     try {
@@ -33,13 +40,28 @@ const registerUser= asyncHandler( async (req,res)=>{
 
 const loginUser= asyncHandler(async(req,res)=>{
     const {text,password}=req.body;
+    const clientIp = getClientIp(req);
     const user = await User.findOne({
         $or: [{ email: text }, { username: text }] 
     });
     //vaildation
-    if(!user)return res.status(400).json(new ApiResponse(400,null,"Invalid Email or User Does not exist"));
+    if(!user){
+        const failure = await recordFailedLoginAttempt({ identifier: text, ip: clientIp });
+        if (failure?.blocked) {
+            return res.status(429).json(new ApiResponse(429,null,"Too many login attempts. Please try again later."));
+        }
+        return res.status(400).json(new ApiResponse(400,null,"Invalid Email or User Does not exist"));
+    }
     const isPasswordValid=await user.isPasswordCorrect(password);
-    if(!isPasswordValid)return res.status(400).json(new ApiResponse(400,null,"Invalid password"));
+    if(!isPasswordValid){
+        const failure = await recordFailedLoginAttempt({ identifier: user.email || text, ip: clientIp });
+        if (failure?.blocked) {
+            return res.status(429).json(new ApiResponse(429,null,"Too many login attempts. Please try again later."));
+        }
+        return res.status(400).json(new ApiResponse(400,null,"Invalid password"));
+    }
+
+    await clearFailedLoginAttempts({ identifier: user.email || text, ip: clientIp });
     
     //token generation
     const {accessToken,refreshToken}=await generateAccessAndRefreshTokens(user._id);
@@ -135,8 +157,14 @@ const forgotPassword = asyncHandler(async (req, res) => {
     const user=await User.findOne({email});
     if (!user)return res.status(404).json(new ApiResponse(404, null, "User not found"));
     const resetToken = crypto.randomBytes(32).toString("hex");
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpire = Date.now() + 3600; 
+    const redisStored = await storeResetToken({ email: user.email, userId: user._id, token: resetToken });
+    if (!redisStored) {
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpire = Date.now() + 3600000;
+    } else {
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpire = undefined;
+    }
     await user.save({ validateBeforeSave: false });
     const resetUrl = `${process.env.FRONT_END_URL}/setpassword/${resetToken}`;
     await sendEmail(
@@ -151,10 +179,18 @@ const resetPassword = asyncHandler(async (req, res) => {
     const { token } = req.params;
     const { newPassword } = req.body;
     if(!newPassword)return res.status(404).json(new ApiResponse(404, null, "Please enter new password"));
-    const user = await User.findOne({
-        resetPasswordToken: token,
-        resetPasswordExpire: { $gt: Date.now() }
-    });
+    const redisReset = await consumeResetToken(token);
+    let user = null;
+
+    if (redisReset?.userId) {
+        user = await User.findById(redisReset.userId);
+    } else {
+        user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpire: { $gt: Date.now() }
+        });
+    }
+
     if (!user) return res.status(400).json(new ApiResponse(400, null, "Invalid or expired token"));
     user.password = newPassword;
     user.resetPasswordToken = undefined;

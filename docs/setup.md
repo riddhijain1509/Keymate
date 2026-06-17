@@ -22,6 +22,7 @@ npm run dev
 PORT=8000
 DB_NAME=Keymate
 MONGODB_URI=your_mongodb_connection_string
+REDIS_URL=redis://localhost:6379
 CORS_ORIGIN=http://localhost:5173
 ACCESS_TOKEN_SECRET=your_access_token_secret
 ACCESS_TOKEN_EXPIRY=1d
@@ -45,5 +46,6 @@ VITE_BACKEND_URL=http://localhost:8000
 
 - The frontend reads the backend URL from `VITE_BACKEND_URL`.
 - The backend requires MongoDB and JWT secrets to start.
+- Redis is used for rate limiting, login failure tracking, and password-reset token TTL.
+- If `REDIS_URL` is not set, the app will still run, but those Redis-backed protections will fall back to no-op or legacy behavior.
 - Vault unlock and password actions require a logged-in session.
-
