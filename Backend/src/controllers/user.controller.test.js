@@ -10,6 +10,10 @@ vi.mock("../models/user.model.js", () => ({
   User: mockUserApi,
 }));
 
+vi.mock("../utils/auditStream.js", () => ({
+  queueAuditEvent: vi.fn().mockResolvedValue({ queued: false, persistedDirectly: false }),
+}));
+
 import { registerUser } from "./user.controller.js";
 
 const createResponseMock = () => {
@@ -47,8 +51,9 @@ describe("registerUser", () => {
       },
     };
     const res = createResponseMock();
+    const next = vi.fn();
 
-    await registerUser(req, res);
+    await registerUser(req, res, next);
 
     expect(mockUserApi.findOne).toHaveBeenCalledTimes(1);
     expect(mockUserApi.create).toHaveBeenCalledTimes(1);
@@ -68,8 +73,9 @@ describe("registerUser", () => {
       },
     };
     const res = createResponseMock();
+    const next = vi.fn();
 
-    await registerUser(req, res);
+    await registerUser(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalled();

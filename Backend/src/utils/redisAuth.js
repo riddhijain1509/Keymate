@@ -10,7 +10,7 @@ const normalizeValue = (value = "") => String(value).trim().toLowerCase();
 const sha256 = (value) => crypto.createHash("sha256").update(value).digest("hex");
 
 const getIpAddress = (req) => {
-  const forwardedFor = req.headers["x-forwarded-for"];
+  const forwardedFor = req?.headers?.["x-forwarded-for"];
   if (typeof forwardedFor === "string" && forwardedFor.trim()) {
     return forwardedFor.split(",")[0].trim();
   }

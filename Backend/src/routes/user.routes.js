@@ -1,6 +1,6 @@
 import {Router} from 'express'
 import { verifyJWT } from '../middlewares/auth.middleware.js';
-import { getCurrentUser, loginUser, logoutUser,forgotPassword,resetPassword, refreshAccessToken, registerUser, setupVault, getVaultMeta, rotateVault } from '../controllers/user.controller.js';
+import { getAuditLogs, getCurrentUser, loginUser, logoutUser,forgotPassword,resetPassword, refreshAccessToken, registerUser, setupVault, getVaultMeta, rotateVault } from '../controllers/user.controller.js';
 import { createRedisRateLimiter } from '../middlewares/rateLimit.middleware.js';
 
 const router= Router();
@@ -36,5 +36,6 @@ router.route('/vault/rotate').patch(verifyJWT,rotateVault);
 router.route('/logout').post(verifyJWT,logoutUser);
 router.route('/refresh-token').post(refreshAccessToken);
 router.route('/getcurrentuser').get(verifyJWT,getCurrentUser);
+router.route('/audit-logs').get(verifyJWT,getAuditLogs);
 
 export default router;

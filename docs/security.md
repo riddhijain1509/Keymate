@@ -8,6 +8,8 @@
 - Recovery key fallback
 - Key rotation for vault wrapping material
 - Password strength guidance in the UI
+- Redis-backed auth protections
+- Audit logging for sensitive account and vault actions
 
 ## What Should Stay Secret
 
@@ -32,6 +34,5 @@ flowchart TD
 - auto-lock on inactivity
 - trusted device management
 - device revocation
-- audit log
+- real-time security signals
 - optional account 2FA
-
