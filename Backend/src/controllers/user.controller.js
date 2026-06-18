@@ -14,6 +14,7 @@ import {
     storeResetToken,
 } from "../utils/redisAuth.js";
 import { queueAuditEvent } from "../utils/auditStream.js";
+import { getDeviceContext, upsertKnownDevice } from "../utils/deviceFingerprint.js";
 
 const generateAccessAndRefreshTokens = async(userId)=>{
     try {
@@ -68,6 +69,7 @@ const registerUser= asyncHandler( async (req,res)=>{
 const loginUser= asyncHandler(async(req,res)=>{
     const {text,password}=req.body;
     const clientIp = getClientIp(req);
+    const deviceContext = getDeviceContext(req);
     const user = await User.findOne({
         $or: [{ email: text }, { username: text }] 
     });
@@ -116,6 +118,8 @@ const loginUser= asyncHandler(async(req,res)=>{
     }
 
     await clearFailedLoginAttempts({ identifier: user.email || text, ip: clientIp });
+    const deviceResult = upsertKnownDevice(user, deviceContext);
+    await user.save({ validateBeforeSave: false });
     await queueAuditEvent({
         userId: user._id,
         type: "login_success",
@@ -126,8 +130,25 @@ const loginUser= asyncHandler(async(req,res)=>{
         identifier: user.email,
         metadata: {
             username: user.username,
+            deviceLabel: deviceResult.deviceLabel,
         },
     });
+    if (deviceResult.isNewDevice) {
+        await queueAuditEvent({
+            userId: user._id,
+            type: "login_from_new_device",
+            status: "success",
+            severity: "warning",
+            ip: clientIp,
+            route: req.originalUrl,
+            identifier: user.email,
+            metadata: {
+                username: user.username,
+                deviceLabel: deviceResult.deviceLabel,
+                reason: "first_seen_device",
+            },
+        });
+    }
     
     //token generation
     const {accessToken,refreshToken}=await generateAccessAndRefreshTokens(user._id);
@@ -458,8 +479,47 @@ const rotateVault = asyncHandler(async (req, res) => {
             version: user.vaultKeyMeta.version,
         },
     });
+    await queueAuditEvent({
+        userId: user._id,
+        type: "recovery_key_regenerated",
+        status: "success",
+        severity: "warning",
+        ip: getClientIp(req),
+        route: req.originalUrl,
+        identifier: user.email,
+        metadata: {
+            reason: "vault_rotation",
+            version: user.vaultKeyMeta.version,
+        },
+    });
 
     return res.status(200).json(new ApiResponse(200, user.vaultKeyMeta, "Vault keys rotated successfully"));
+});
+
+const reportVaultUnlockFailure = asyncHandler(async (req, res) => {
+    const { failedCount, method } = req.body;
+    const normalizedCount = Number(failedCount);
+
+    if (!Number.isFinite(normalizedCount) || normalizedCount < 3) {
+        return res.status(400).json(new ApiResponse(400, null, "Failed unlock count must be at least 3"));
+    }
+
+    await queueAuditEvent({
+        userId: req.user._id,
+        type: "vault_unlock_failed_multiple",
+        status: "failed",
+        severity: "warning",
+        ip: getClientIp(req),
+        route: req.originalUrl,
+        identifier: req.user.email,
+        metadata: {
+            reason: "repeated_unlock_failures",
+            unlockMethod: method === "recovery" ? "recovery" : "master",
+            failedCount: normalizedCount,
+        },
+    });
+
+    return res.status(200).json(new ApiResponse(200, null, "Vault unlock failure recorded"));
 });
 
 const getAuditLogs = asyncHandler(async (req, res) => {
@@ -472,4 +532,4 @@ const getAuditLogs = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, logs, "Audit logs fetched successfully"));
 });
 
-export {registerUser,loginUser,logoutUser,refreshAccessToken,getCurrentUser,forgotPassword,resetPassword,setupVault,getVaultMeta,rotateVault,getAuditLogs };
+export {registerUser,loginUser,logoutUser,refreshAccessToken,getCurrentUser,forgotPassword,resetPassword,setupVault,getVaultMeta,rotateVault,getAuditLogs,reportVaultUnlockFailure };

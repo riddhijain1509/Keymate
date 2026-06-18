@@ -1,6 +1,8 @@
 import { initRedis } from "../config/redis.js";
 import { AUDIT_STREAM_KEY, parseAuditEvent } from "../utils/auditEvent.js";
 import { persistAuditEvent } from "../utils/auditStream.js";
+import { buildSecuritySignal } from "../utils/securitySignals.js";
+import { getSocketServer } from "../utils/socket.js";
 
 let auditWorkerStarted = false;
 
@@ -38,6 +40,12 @@ export const startAuditWorker = async () => {
 
             if (parsedEvent?.type) {
               await persistAuditEvent(parsedEvent);
+              const signal = buildSecuritySignal(parsedEvent);
+              const io = getSocketServer();
+
+              if (signal && io && parsedEvent.userId) {
+                io.to(`user:${parsedEvent.userId}`).emit("security:event", signal);
+              }
             }
 
             lastId = message.id;

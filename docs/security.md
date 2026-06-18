@@ -10,6 +10,7 @@
 - Password strength guidance in the UI
 - Redis-backed auth protections
 - Audit logging for sensitive account and vault actions
+- Real-time security signals delivered over authenticated sockets
 
 ## What Should Stay Secret
 
@@ -26,7 +27,27 @@ flowchart TD
   B --> C[Store ciphertext]
   C --> D[Only unlock locally]
   D --> E[Rotate keys without re-encrypting entries]
+  F[Sensitive action happens] --> G[Sanitized audit event]
+  G --> H[Redis stream]
+  H --> I[Persist audit log]
+  H --> J[Broadcast safe live signal]
 ```
+
+## Live Signal Rules
+
+- Socket connections are authenticated with the existing JWT
+- Each socket joins a per-user room on the backend
+- Only sanitized, allowlisted event metadata is broadcast
+- Secrets such as passwords, ciphertext, DEKs, tokens, and recovery material are never emitted
+
+## Current Live Signals
+
+- `login_from_new_device`
+- `vault_unlock_failed_multiple`
+- `recovery_key_regenerated`
+- `vault_rotated`
+- `login_success`
+- password create, update, and delete activity
 
 ## Future Improvements
 
@@ -34,5 +55,4 @@ flowchart TD
 - auto-lock on inactivity
 - trusted device management
 - device revocation
-- real-time security signals
 - optional account 2FA
