@@ -15,19 +15,19 @@ KeyMate is a browser-encrypted password manager built around a zero-knowledge va
 ## Architecture Snapshot
 
 ```mermaid
-flowchart LR
-  A["User enters password entry"] --> B["Encrypt in browser"]
-  B --> C["Send ciphertext to backend"]
-  C --> D["Store ciphertext in MongoDB"]
+graph LR
+  A[User enters entry] --> B[Encrypt in browser]
+  B --> C[Send ciphertext]
+  C --> D[Store in MongoDB]
 
-  E["Master password"] --> F["Derive wrapping key"]
-  F --> G["Wrap DEK"]
-  H["Recovery key"] --> I["Wrap same DEK"]
+  E[Master password] --> F[Derive wrapping key]
+  F --> G[Wrap DEK]
+  H[Recovery key] --> I[Wrap same DEK]
 
-  J["Sensitive backend action"] --> K["Sanitized audit event"]
-  K --> L["Redis stream"]
-  L --> M["Persist audit log"]
-  L --> N["Broadcast safe live signal"]
+  J[Backend security action] --> K[Sanitized audit event]
+  K --> L[Redis stream]
+  L --> M[Persist audit log]
+  L --> N[Broadcast live signal]
 ```
 
 ## Project Areas
