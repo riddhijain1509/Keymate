@@ -9,6 +9,7 @@
 - `POST /users/logout`
 - `POST /users/refresh-token`
 - `GET /users/getcurrentuser`
+- `GET /users/audit-logs`
 
 ## Vault Routes
 
@@ -33,4 +34,4 @@ Vault metadata stores wrapped key material and KDF details, while password recor
 - Authentication routes use JWT.
 - Vault routes require a verified session.
 - Password routes operate on user-owned records only.
-
+- Audit logs are persisted in MongoDB and can be queued through Redis for asynchronous processing.

@@ -7,6 +7,7 @@ Redis is used as a fast, temporary security layer for the backend.
 - rate limits registration, login, and forgot-password requests
 - tracks failed login attempts by user identifier and IP
 - stores password reset tokens with automatic expiry
+- queues audit events through a Redis stream for asynchronous persistence
 
 ## What Redis Does Not Store
 
@@ -46,12 +47,13 @@ flowchart TD
   A[Login / register / forgot password request] --> B[Redis rate limit counter]
   A --> C[Redis failed login counter]
   D[Forgot password] --> E[Redis reset-token TTL]
+  H[Security event emitted by controller] --> I[Redis audit stream]
   B --> F[Allow or block request]
   C --> F
   E --> G[Verify token then delete after use]
+  I --> J[Audit worker persists event to MongoDB]
 ```
 
 ## Safety Note
 
 If Redis is unavailable in local development, the app can continue running, but Redis-backed protections will be weaker or disabled.
-

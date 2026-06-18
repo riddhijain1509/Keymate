@@ -1,6 +1,7 @@
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { initRedis } from "../config/redis.js";
 import { getClientIp } from "../utils/redisAuth.js";
+import { queueAuditEvent } from "../utils/auditStream.js";
 
 export const createRedisRateLimiter = ({
   prefix,
@@ -22,6 +23,20 @@ export const createRedisRateLimiter = ({
 
     if (count > limit) {
       const ttl = await client.ttl(key);
+      await queueAuditEvent({
+        userId: req.user?._id || null,
+        type: `${prefix}_rate_limited`,
+        status: "blocked",
+        severity: "warning",
+        ip: getClientIp(req),
+        route: req.originalUrl,
+        identifier: req.body?.email || req.body?.text || null,
+        metadata: {
+          limit,
+          windowSeconds,
+          retryAfterSeconds: ttl > 0 ? ttl : windowSeconds,
+        },
+      });
       return res
         .status(429)
         .json(
@@ -40,4 +55,3 @@ export const createRedisRateLimiter = ({
     return next();
   }
 };
-

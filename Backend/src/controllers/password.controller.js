@@ -2,6 +2,8 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import {Password} from "../models/password.model.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { queueAuditEvent } from "../utils/auditStream.js";
+import { getClientIp } from "../utils/redisAuth.js";
 export const addPassword = asyncHandler(async (req, res) => 
 {
     const { websiteName, websiteURL, ciphertext, iv, version = 1 } = req.body;
@@ -17,6 +19,20 @@ export const addPassword = asyncHandler(async (req, res) =>
         ciphertext,
         iv,
         version,
+    });
+
+    await queueAuditEvent({
+        userId: req.user._id,
+        type: "password_created",
+        status: "success",
+        severity: "info",
+        ip: getClientIp(req),
+        route: req.originalUrl,
+        identifier: req.user.email,
+        metadata: {
+            passwordId: newPasswordEntry._id,
+            websiteName,
+        },
     });
 
     return res
@@ -36,6 +52,20 @@ export const deletePassword = asyncHandler(async (req, res) =>
     if (!deletedEntry) {
         throw new ApiError(404, "Password entry not found");
     }
+
+    await queueAuditEvent({
+        userId: req.user._id,
+        type: "password_deleted",
+        status: "success",
+        severity: "info",
+        ip: getClientIp(req),
+        route: req.originalUrl,
+        identifier: req.user.email,
+        metadata: {
+            passwordId,
+            websiteName: deletedEntry.websiteName,
+        },
+    });
 
     return res
         .status(200)
@@ -62,6 +92,20 @@ export const updatePassword = asyncHandler(async (req, res) => {
     if (version !== undefined) passwordEntry.version = version;
 
     await passwordEntry.save();
+
+    await queueAuditEvent({
+        userId: req.user._id,
+        type: "password_updated",
+        status: "success",
+        severity: "info",
+        ip: getClientIp(req),
+        route: req.originalUrl,
+        identifier: req.user.email,
+        metadata: {
+            passwordId,
+            websiteName: passwordEntry.websiteName,
+        },
+    });
 
     return res.status(200).json(new ApiResponse(200,passwordEntry,"Password entry updated successfully"));
 });
