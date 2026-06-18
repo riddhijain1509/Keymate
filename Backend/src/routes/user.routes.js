@@ -1,6 +1,6 @@
 import {Router} from 'express'
 import { verifyJWT } from '../middlewares/auth.middleware.js';
-import { getAuditLogs, getCurrentUser, loginUser, logoutUser,forgotPassword,resetPassword, refreshAccessToken, registerUser, setupVault, getVaultMeta, rotateVault } from '../controllers/user.controller.js';
+import { getAuditLogs, getCurrentUser, loginUser, logoutUser,forgotPassword,resetPassword, refreshAccessToken, registerUser, reportVaultUnlockFailure, setupVault, getVaultMeta, rotateVault } from '../controllers/user.controller.js';
 import { createRedisRateLimiter } from '../middlewares/rateLimit.middleware.js';
 
 const router= Router();
@@ -31,6 +31,7 @@ router.route('/resetpassword/:token').post(resetPassword);
 router.route('/vault/setup').post(verifyJWT,setupVault);
 router.route('/vault/meta').get(verifyJWT,getVaultMeta);
 router.route('/vault/rotate').patch(verifyJWT,rotateVault);
+router.route('/vault/unlock-failure').post(verifyJWT,reportVaultUnlockFailure);
 
 //SECURED ROUTES
 router.route('/logout').post(verifyJWT,logoutUser);

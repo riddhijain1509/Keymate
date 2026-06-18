@@ -10,6 +10,7 @@ import {
 import Footer from "../Footer.jsx";
 import {
   fetchVaultMetaService,
+  reportVaultUnlockFailureService,
   setupVaultService,
   rotateVaultKeysService,
   unlockVaultWithRecoveryService,
@@ -38,6 +39,7 @@ const PrivateKey = () => {
   const [rotateConfirmPassword, setRotateConfirmPassword] = useState("");
   const [showRotateForm, setShowRotateForm] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+  const [unlockFailureCount, setUnlockFailureCount] = useState(0);
 
   useEffect(() => {
     const init = async () => {
@@ -98,9 +100,18 @@ const PrivateKey = () => {
           ? await unlockVaultService(unlockPassword, vaultMeta)
           : await unlockVaultWithRecoveryService(recoveryKeyInput, vaultMeta);
       dispatch(setVaultKeyJwk(dekJwk));
+      setUnlockFailureCount(0);
       toast.success("Vault unlocked");
       navigate("/passwords");
     } catch (error) {
+      const nextFailureCount = unlockFailureCount + 1;
+      setUnlockFailureCount(nextFailureCount);
+      if (nextFailureCount >= 3) {
+        await reportVaultUnlockFailureService({
+          failedCount: nextFailureCount,
+          method: unlockMethod,
+        });
+      }
       toast.error(error.message || "Failed to unlock vault");
     } finally {
       setIsBusy(false);
@@ -111,6 +122,7 @@ const PrivateKey = () => {
     dispatch(clearVaultKey());
     setUnlockPassword("");
     setRecoveryKeyInput("");
+    setUnlockFailureCount(0);
     toast.success("Vault locked");
   };
 

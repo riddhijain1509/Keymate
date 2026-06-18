@@ -13,18 +13,19 @@ function Hero() {
       <div className="mx-auto grid w-full max-w-7xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="space-y-8 text-center lg:text-left">
           <div className="inline-flex items-center rounded-full border border-[#81c3d7]/40 bg-white/5 px-4 py-2 text-sm font-medium text-[#d5f4ff] shadow-lg shadow-black/10 backdrop-blur">
-            Client-side encryption, built for zero-knowledge from the start
+            Client-side encryption with recovery, rotation, and live security signals
           </div>
 
           <div className="space-y-4">
             <h1 className="text-4xl font-extrabold leading-tight text-white sm:text-5xl lg:text-6xl">
-              Protect your passwords with a vault that keeps{" "}
-              <span className="text-[#81c3d7]">ciphertext on the server</span>
+              Secure your vault with{" "}
+              <span className="text-[#81c3d7]">browser-side encryption</span>
+              {" "}and a safer account security layer
             </h1>
             <p className="mx-auto max-w-2xl text-base leading-7 text-slate-200 sm:text-lg lg:mx-0">
-              KeyMate encrypts sensitive vault data in your browser before it ever reaches the
-              backend. Your master password protects the vault key, while recovery support keeps
-              access resilient without exposing plaintext.
+              KeyMate encrypts password entries before they leave the browser, protects the vault
+              key with a master password, supports recovery-key based rescue, and surfaces live
+              security activity so users can spot meaningful account events quickly.
             </p>
           </div>
 
@@ -45,23 +46,22 @@ function Hero() {
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-left backdrop-blur">
-              <div className="text-sm text-slate-300">Browser-side</div>
-              <div className="mt-1 text-lg font-semibold text-white">AES-GCM encryption</div>
+              <div className="text-sm text-slate-300">Vault entries</div>
+              <div className="mt-1 text-lg font-semibold text-white">Encrypted before upload</div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-left backdrop-blur">
               <div className="text-sm text-slate-300">Vault key</div>
-              <div className="mt-1 text-lg font-semibold text-white">Protected by KDF + recovery</div>
+              <div className="mt-1 text-lg font-semibold text-white">Master password + recovery</div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-left backdrop-blur">
-              <div className="text-sm text-slate-300">Server data</div>
-              <div className="mt-1 text-lg font-semibold text-white">Ciphertext only</div>
+              <div className="text-sm text-slate-300">Security feed</div>
+              <div className="mt-1 text-lg font-semibold text-white">Real-time account signals</div>
             </div>
           </div>
 
           <p className="max-w-2xl text-sm leading-6 text-slate-300 lg:mx-0">
-            This layout keeps the product story simple: encrypt locally, store safely, and make
-            future zero-knowledge upgrades possible without changing how password entries are
-            encrypted.
+            The current architecture keeps entry encryption stable while vault key protection,
+            recovery flows, Redis-backed defenses, and security visibility continue to improve.
           </p>
         </div>
 
@@ -75,15 +75,15 @@ function Hero() {
             />
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-[#81c3d7]">Phase 1</div>
+                <div className="text-xs uppercase tracking-[0.2em] text-[#81c3d7]">Vault Model</div>
                 <div className="mt-2 text-sm text-slate-200">
-                  Encrypt entries in the browser before sending anything to the backend.
+                  Entries are encrypted client-side and the backend stores ciphertext only.
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-[#81c3d7]">Phase 2+</div>
+                <div className="text-xs uppercase tracking-[0.2em] text-[#81c3d7]">Security Layer</div>
                 <div className="mt-2 text-sm text-slate-200">
-                  Keep entry encryption stable while key protection evolves.
+                  Recovery keys, rotation, Redis protections, and live signals add resilience.
                 </div>
               </div>
             </div>

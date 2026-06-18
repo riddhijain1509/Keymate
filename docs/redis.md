@@ -8,6 +8,8 @@ Redis is used as a fast, temporary security layer for the backend.
 - tracks failed login attempts by user identifier and IP
 - stores password reset tokens with automatic expiry
 - queues audit events through a Redis stream for asynchronous persistence
+- fans sanitized audit-derived security signals out to connected clients through the audit worker
+- supports real-time signals such as new-device login detection and repeated vault unlock failure alerts
 
 ## What Redis Does Not Store
 
@@ -52,6 +54,8 @@ flowchart TD
   C --> F
   E --> G[Verify token then delete after use]
   I --> J[Audit worker persists event to MongoDB]
+  I --> K[Audit worker emits safe Socket.IO signal]
+  K --> L[Authenticated frontend listener]
 ```
 
 ## Safety Note

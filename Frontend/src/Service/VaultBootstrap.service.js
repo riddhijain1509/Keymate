@@ -150,3 +150,22 @@ export const rotateVaultKeysService = async (masterPassword, vaultKeyJwk) => {
     recoveryKey,
   };
 };
+
+export const reportVaultUnlockFailureService = async ({ failedCount, method }) => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) return false;
+
+  const response = await fetch(`${backendURL}/users/vault/unlock-failure`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      failedCount,
+      method,
+    }),
+  });
+
+  return response.status === 200;
+};

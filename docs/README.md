@@ -1,6 +1,6 @@
 # Documentation Index
 
-This folder contains the project documentation split by topic.
+This folder contains the project documentation split by topic, including the Redis-backed security layer used for rate limiting, audit-event streaming, and live security signals.
 
 ## Guides
 
@@ -14,7 +14,7 @@ This folder contains the project documentation split by topic.
 
 ## What to read first
 
-1. [Architecture](architecture.md) to understand the vault model.
+1. [Architecture](architecture.md) to understand the vault model and Redis security layer.
 2. [Setup](setup.md) to run the project locally.
 3. [Redis Guide](redis.md) for local and production Redis setup.
 4. [Security Model](security.md) to understand how the vault is protected.

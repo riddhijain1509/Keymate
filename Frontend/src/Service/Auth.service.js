@@ -1,11 +1,15 @@
 import { toast } from 'react-hot-toast';
+import { getDeviceHeaders } from './Device.service.js';
 const backendURL = import.meta.env?.VITE_BACKEND_URL;
 
 export const loginUser = async (userData) => {
     try {
       const response = await fetch(`${backendURL}/users/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...getDeviceHeaders(),
+        },
         body: JSON.stringify(userData),
       });
   
@@ -113,6 +117,28 @@ export const getMyProfile = async () => {
   {
     toast.error('Failed to Load Profile');
     return null;
+  }
+};
+
+export const getAuditLogsService = async () => {
+  try {
+    const token = localStorage.getItem('accessToken');
+    const response = await fetch(`${backendURL}/users/audit-logs`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+    if (response.status === 200) {
+      return data.data ?? [];
+    }
+
+    return [];
+  } catch (_error) {
+    return [];
   }
 };
 

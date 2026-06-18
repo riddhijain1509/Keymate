@@ -62,6 +62,29 @@ const userSchema=new Schema({
             default: null,
         },
     },
+    knownDevices: {
+        type: [
+            {
+                deviceId: {
+                    type: String,
+                    required: true,
+                },
+                label: {
+                    type: String,
+                    default: "Unknown device",
+                },
+                firstSeenAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+                lastSeenAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+            },
+        ],
+        default: [],
+    },
 },{timestamps:true});
 
 userSchema.pre("save",async function(next){
